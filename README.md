@@ -12,7 +12,7 @@ High-resolution video link: [here](https://youtu.be/Ym_CH8yxBso)
 
 
 ## Introduction  
-This repo is official **[PyTorch](https://pytorch.org)** implementation of **[**Accurate 3D Hand Pose Estimation for Whole-Body 3D Human Mesh Estimation** (CVPRW 2022)](https://arxiv.org/abs/2011.11534)**. **This repo contains whole-body codes**
+This repo is official **[PyTorch](https://pytorch.org)** implementation of **[**Accurate 3D Hand Pose Estimation for Whole-Body 3D Human Mesh Estimation** (CVPRW 2022)](https://arxiv.org/abs/2011.11534)**. **This repo contains whole-body codes**.
   
   
 ## Quick demo  
@@ -145,7 +145,7 @@ python test.py --gpu 0-3 --test_epoch 6
 to test Hand4Whole on the GPU 0,1,2,3 with60th epoch trained model. `--gpu 0,1,2,3` can be used instead of `--gpu 0-3`.  
   
 ## Models
-* Download Hand4Whole trained on H36M+MPI-INF-3DHP+MSCOCO from [here](https://drive.google.com/file/d/1fHF_llZSxbjJNL_Gsz_NbiWAfb1fSsNZ/view?usp=sharing).
+* Download Hand4Whole trained on H36M+MPII+MSCOCO from [here](https://drive.google.com/file/d/1fHF_llZSxbjJNL_Gsz_NbiWAfb1fSsNZ/view?usp=sharing).
 * Download Hand4Whole fine-tuned on AGORA (with gender classification) from [here](https://drive.google.com/file/d/1iEc0uPhhKTH-QVuf-qH-IpYWuNeb2jfP/view?usp=sharing).
 
 ## Troubleshoots
