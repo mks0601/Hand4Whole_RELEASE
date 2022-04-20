@@ -1,6 +1,5 @@
 import os
 import os.path as osp
-from glob import glob
 import numpy as np
 from config import cfg
 import copy
@@ -8,11 +7,12 @@ import json
 import pickle
 import cv2
 import torch
+from glob import glob
 from pycocotools.coco import COCO
-from utils.human_models import smpl_x
-from utils.preprocessing import load_img, sanitize_bbox, process_bbox, augmentation, process_db_coord, process_human_model_output, load_ply, load_obj
+from utils.human_models import smpl_x, smpl, mano, flame
+from utils.preprocessing import load_img, process_bbox, augmentation, process_db_coord, process_human_model_output
 from utils.transforms import rigid_align
-from utils.vis import vis_keypoints, vis_mesh, save_obj, render_mesh
+from utils.vis import vis_keypoints, vis_mesh, save_obj
 
 class AGORA(torch.utils.data.Dataset):
     def __init__(self, transform, data_split):
@@ -20,13 +20,12 @@ class AGORA(torch.utils.data.Dataset):
         self.data_split = data_split
         self.data_path = osp.join('..', 'data', 'AGORA', 'data')
         self.resolution = (2160, 3840) # height, width. one of (720, 1280) and (2160, 3840)
-        self.test_set = 'val' # val, test
-
+        self.test_set = 'test' # val, test
+        
         # AGORA joint set
         self.joint_set = {
-                            'joint_num': 127, 
-                            'joints_name': \
-                                ('Pelvis', 'L_Hip', 'R_Hip', 'Spine_1', 'L_Knee', 'R_Knee', 'Spine_2', 'L_Ankle', 'R_Ankle', 'Spine_3', 'L_Foot', 'R_Foot', 'Neck', 'L_Collar', 'R_Collar', 'Head', 'L_Shoulder', 'R_Shoulder', 'L_Elbow', 'R_Elbow', 'L_Wrist', 'R_Wrist',  # body
+                            'smplx_orig': { \
+                                    'joints_name': ('Pelvis', 'L_Hip', 'R_Hip', 'Spine_1', 'L_Knee', 'R_Knee', 'Spine_2', 'L_Ankle', 'R_Ankle', 'Spine_3', 'L_Foot', 'R_Foot', 'Neck', 'L_Collar', 'R_Collar', 'Head', 'L_Shoulder', 'R_Shoulder', 'L_Elbow', 'R_Elbow', 'L_Wrist', 'R_Wrist',  # body
                                 'Jaw', 'L_Eye_SMPLH', 'R_Eye_SMPLH',  # SMPLH
                                 'L_Index_1', 'L_Index_2', 'L_Index_3', 'L_Middle_1', 'L_Middle_2', 'L_Middle_3', 'L_Pinky_1', 'L_Pinky_2', 'L_Pinky_3', 'L_Ring_1', 'L_Ring_2', 'L_Ring_3', 'L_Thumb_1', 'L_Thumb_2', 'L_Thumb_3',  # fingers
                                 'R_Index_1', 'R_Index_2', 'R_Index_3', 'R_Middle_1', 'R_Middle_2', 'R_Middle_3', 'R_Pinky_1', 'R_Pinky_2', 'R_Pinky_3', 'R_Ring_1', 'R_Ring_2', 'R_Ring_3', 'R_Thumb_1', 'R_Thumb_2', 'R_Thumb_3',  # fingers
@@ -34,39 +33,53 @@ class AGORA(torch.utils.data.Dataset):
                                 'L_Big_toe', 'L_Small_toe', 'L_Heel', 'R_Big_toe', 'R_Small_toe', 'R_Heel',  # feet
                                 'L_Thumb_4', 'L_Index_4', 'L_Middle_4', 'L_Ring_4', 'L_Pinky_4',  # finger tips
                                 'R_Thumb_4', 'R_Index_4', 'R_Middle_4', 'R_Ring_4', 'R_Pinky_4', # finger tips
-                                *['Face_' + str(i) for i in range(5,56)] # face
-                                ),
-                            'flip_pairs': \
-                                ((1,2), (4,5), (7,8), (10,11), (13,14), (16,17), (18,19), (20,21),  # body
-                                (23,24), # SMPLH
-                                (25,40), (26,41), (27,42), (28,43), (29,44), (30,45), (31,46), (32,47), (33,48), (34,49), (35,50), (36,51), (37,52), (38,53), (39,54), # fingers
-                                (56,57), (58,59), # face in body
-                                (60,63), (61,64), (62,65), # feet
-                                (66,71), (67,72), (68,73), (69,74), (70,75), # fingertips
-                                (76,85), (77,84), (78,83), (79,82), (80,81), # face eyebrow
-                                (90,94), (91,93), # face below nose
-                                (95,104), (96,103), (97,102), (98,101), (99,106), (100,105), # face eyes
-                                (107,113), (108,112), (109,111), (114,118), (115,117), # face mouth
-                                (119,123), (120,122), (124,126) # face lip
-                                )
+                                *['Face_' + str(i) for i in range(5,56)]) # face
+                                },
 
-                        }
+                            'hand': { \
+                                    'joint_num': 21,
+                                    'joints_name': ('Wrist', 'Index_1', 'Index_2', 'Index_3', 'Middle_1', 'Middle_2', 'Middle_3', 'Pinky_1', 'Pinky_2', 'Pinky_3', 'Ring_1', 'Ring_2', 'Ring_3', 'Thumb_1', 'Thumb_2', 'Thumb_3', 'Thumb_4', 'Index_4', 'Middle_4', 'Ring_4', 'Pinky_4'),
+                                    'flip_pairs': ()
+                                    },
 
-        self.joint_set['joint_part'] = {
-                                    'body': list(range(self.joint_set['joints_name'].index('Pelvis'), self.joint_set['joints_name'].index('R_Eye_SMPLH')+1)) + list(range(self.joint_set['joints_name'].index('Nose'), self.joint_set['joints_name'].index('R_Heel')+1)),
-                                    'lhand': list(range(self.joint_set['joints_name'].index('L_Index_1'), self.joint_set['joints_name'].index('L_Thumb_3')+1)) + list(range(self.joint_set['joints_name'].index('L_Thumb_4'), self.joint_set['joints_name'].index('L_Pinky_4')+1)),
-                                    'rhand': list(range(self.joint_set['joints_name'].index('R_Index_1'), self.joint_set['joints_name'].index('R_Thumb_3')+1)) + list(range(self.joint_set['joints_name'].index('R_Thumb_4'), self.joint_set['joints_name'].index('R_Pinky_4')+1)),
-                                    'face': list(range(self.joint_set['joints_name'].index('Face_5'), self.joint_set['joints_name'].index('Face_55')+1))}
-        self.joint_set['root_joint_idx'] = self.joint_set['joints_name'].index('Pelvis')
-        self.joint_set['lwrist_idx'] = self.joint_set['joints_name'].index('L_Wrist')
-        self.joint_set['rwrist_idx'] = self.joint_set['joints_name'].index('R_Wrist')
-        self.joint_set['neck_idx'] = self.joint_set['joints_name'].index('Neck')
+                            'face': {\
+                                    'joints_name': ['Neck'] + ['Face_' + str(i) for i in range(5,56)],
+                                    'joint_to_flame': (0, -1, -1, -1, -1, # no backheads and eyeballs keypoints
+                                                    0, 1, 2, 3, 4, # right eyebrow
+                                                    5, 6, 7, 8, 9, # left eyebrow
+                                                    10, 11, 12, 13, # nose
+                                                    14, 15, 16, 17, 18, # below nose
+                                                    19, 20, 21, 22, 23, 24, # right eye
+                                                    25, 26, 27, 28, 29, 30, # left eye
+                                                    31, # right lip
+                                                    32, 33, 34, 35, 36, # top lip
+                                                    37, # left lip
+                                                    38, 39, 40, 41, 42, # down lip
+                                                    43, 44, 45, 46, 47, 48, 49, 50, # inside of lip
+                                                    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 # no face contour keypoints
+                                                    )
+                                    },
+                            'body': {\
+                                    'joint_num': 45,
+                                    'joints_name': ('Pelvis', 'L_Hip', 'R_Hip', 'Spine_1', 'L_Knee', 'R_Knee', 'Spine_2', 'L_Ankle', 'R_Ankle', 'Spine_3', 'L_Foot', 'R_Foot', 'Neck', 'L_Collar', 'R_Collar', 'Head', 'L_Shoulder', 'R_Shoulder', 'L_Elbow', 'R_Elbow', 'L_Wrist', 'R_Wrist', 'L_Hand', 'R_Hand', 'Nose', 'R_Eye', 'L_Eye', 'R_Ear', 'L_Ear', 'L_Big_toe', 'L_Small_toe', 'L_Heel', 'R_Big_toe', 'R_Small_toe', 'R_Heel', 'L_Thumb_4', 'L_Index_4', 'L_Middle_4', 'L_Ring_4', 'L_Pinky_4', 'R_Thumb_4', 'R_Index_4', 'R_Middle_4', 'R_Ring_4', 'R_Pinky_4'),
+                                    'flip_pairs': ( (1,2), (4,5), (7,8), (10,11), (13,14), (16,17), (18,19), (20,21), (22,23), (25,26), (27,28), (29,32), (30,33), (31,34), (35,40), (36,41), (37,42), (38,43), (39,44) )
+                                    }
+                            }
 
+        self.joint_set['hand']['root_joint_idx'] = self.joint_set['hand']['joints_name'].index('Wrist')
+        self.joint_set['hand']['orig_to_lhand'] = [self.joint_set['smplx_orig']['joints_name'].index('L_' + name) for name in self.joint_set['hand']['joints_name']]
+        self.joint_set['hand']['orig_to_rhand'] = [self.joint_set['smplx_orig']['joints_name'].index('R_' + name) for name in self.joint_set['hand']['joints_name']]
+
+        self.joint_set['face']['root_joint_idx'] = self.joint_set['face']['joints_name'].index('Neck')
+        self.joint_set['face']['orig_to_face'] = [self.joint_set['smplx_orig']['joints_name'].index(name) for name in self.joint_set['face']['joints_name']]
+
+        self.joint_set['body']['root_joint_idx'] = self.joint_set['body']['joints_name'].index('Pelvis')
         self.datalist = self.load_data()
- 
+
     def load_data(self):
         datalist = []
-        if self.data_split == 'train' or (self.data_split == 'test' and self.test_set == 'val'): 
+
+        if self.data_split == 'train' or (self.data_split == 'test' and self.test_set == 'val'):
             if self.data_split == 'train':
                 db = COCO(osp.join(self.data_path, 'AGORA_train.json'))
             else:
@@ -78,49 +91,64 @@ class AGORA(torch.utils.data.Dataset):
                 img = db.loadImgs(image_id)[0]
                 if not ann['is_valid']:
                     continue
-                
-                gender = ann['gender']
-                joints_2d_path = osp.join(self.data_path, ann['smplx_joints_2d_path'])
-                joints_3d_path = osp.join(self.data_path, ann['smplx_joints_3d_path'])
-                verts_path = osp.join(self.data_path, ann['smplx_verts_path'])
-                smplx_param_path = osp.join(self.data_path, ann['smplx_param_path'])
-               
+
                 if self.resolution == (720, 1280):
-                    img_shape = self.resolution
+                    img_shape = (img['height'], img['width'])
                     img_path = osp.join(self.data_path, img['file_name_1280x720'])
-                    
-                    # convert to current resolution
-                    bbox = np.array(ann['bbox']).reshape(2,2)
-                    bbox[:,0] = bbox[:,0] / 3840 * 1280
-                    bbox[:,1] = bbox[:,1] / 2160 * 720
-                    bbox = bbox.reshape(4)
-                    bbox = process_bbox(bbox, img_shape[1], img_shape[0])
-                    if bbox is None:
-                        continue
+                
+                    if cfg.parts == 'body':
+                        joints_2d_path = osp.join(self.data_path, ann['smpl_joints_2d_path'])
+                        joints_3d_path = osp.join(self.data_path, ann['smpl_joints_3d_path'])
+                        verts_path = osp.join(self.data_path, ann['smpl_verts_path'])
+                        param_path = osp.join(self.data_path, ann['smpl_param_path'])
 
-                    lhand_bbox = np.array(ann['lhand_bbox']).reshape(2,2)
-                    lhand_bbox[:,0] = lhand_bbox[:,0] / 3840 * 1280
-                    lhand_bbox[:,1] = lhand_bbox[:,1] / 2160 * 720
-                    lhand_bbox = lhand_bbox.reshape(4)
-                    lhand_bbox[2:] += lhand_bbox[:2] # xywh -> xyxy
-                    lhand_bbox = sanitize_bbox(lhand_bbox, img_shape[1], img_shape[0])
+                        # convert to current resolution
+                        bbox = np.array(ann['bbox']).reshape(4)
+                        bbox[:,0] = bbox[:,0] / 3840 * 1280
+                        bbox[:,1] = bbox[:,1] / 2160 * 720
+                        bbox = bbox.reshape(4)
+                        bbox = process_bbox(bbox, img_shape[1], img_shape[0])
+                        if bbox is None:
+                            continue
 
-                    rhand_bbox = np.array(ann['rhand_bbox']).reshape(2,2)
-                    rhand_bbox[:,0] = rhand_bbox[:,0] / 3840 * 1280
-                    rhand_bbox[:,1] = rhand_bbox[:,1] / 2160 * 720
-                    rhand_bbox = rhand_bbox.reshape(4)
-                    rhand_bbox[2:] += rhand_bbox[:2] # xywh -> xyxy
-                    rhand_bbox = sanitize_bbox(rhand_bbox, img_shape[1], img_shape[0])
+                        data_dict = {'img_path': img_path, 'img_shape': img_shape, 'bbox': bbox, 'joints_2d_path': joints_2d_path, 'joints_3d_path': joints_3d_path, 'verts_path': verts_path, 'param_path': param_path}
+                        datalist.append(data_dict)
 
-                    face_bbox = np.array(ann['face_bbox']).reshape(2,2)
-                    face_bbox[:,0] = face_bbox[:,0] / 3840 * 1280
-                    face_bbox[:,1] = face_bbox[:,1] / 2160 * 720
-                    face_bbox = face_bbox.reshape(4)
-                    face_bbox[2:] += face_bbox[:2] # xywh -> xyxy
-                    face_bbox = sanitize_bbox(face_bbox, img_shape[1], img_shape[0])
+                    elif cfg.parts == 'hand':
+                        joints_2d_path = osp.join(self.data_path, ann['smplx_joints_2d_path'])
+                        joints_3d_path = osp.join(self.data_path, ann['smplx_joints_3d_path'])
+                        verts_path = osp.join(self.data_path, ann['smplx_verts_path'])
+                        _param_path = osp.join(self.data_path, ann['smplx_param_path'])
 
-                    data_dict = {'img_path': img_path, 'img_shape': img_shape, 'bbox': bbox, 'lhand_bbox': lhand_bbox, 'rhand_bbox': rhand_bbox, 'face_bbox': face_bbox, 'joints_2d_path': joints_2d_path, 'joints_3d_path': joints_3d_path, 'verts_path': verts_path, 'smplx_param_path': smplx_param_path, 'gender': gender, 'ann_id': str(aid)}
-                    datalist.append(data_dict)
+                        for hand_type in ('left', 'right'):
+                            # convert to current resolution
+                            bbox = np.array(ann[hand_type[0] + 'hand_bbox']).reshape(4)
+                            bbox[:,0] = bbox[:,0] / 3840 * 1280
+                            bbox[:,1] = bbox[:,1] / 2160 * 720
+                            bbox = bbox.reshape(4)
+                            bbox = process_bbox(bbox, img_shape[1], img_shape[0])
+                            if bbox is None:
+                                continue
+                            data_dict = {'img_path': img_path, 'img_shape': img_shape, 'bbox': bbox, 'joints_2d_path': joints_2d_path, 'joints_3d_path': joints_3d_path, 'verts_path': verts_path, 'param_path': param_path, 'hand_type': hand_type}
+                            datalist.append(data_dict)
+
+                    elif cfg.parts == 'face':
+                        joints_2d_path = osp.join(self.data_path, ann['smplx_joints_2d_path'])
+                        joints_3d_path = osp.join(self.data_path, ann['smplx_joints_3d_path'])
+                        verts_path = osp.join(self.data_path, ann['smplx_verts_path'])
+                        param_path = osp.join(self.data_path, ann['smplx_param_path'])
+
+                        # convert to current resolution
+                        bbox = np.array(ann['face_bbox']).reshape(4)
+                        bbox[:,0] = bbox[:,0] / 3840 * 1280
+                        bbox[:,1] = bbox[:,1] / 2160 * 720
+                        bbox = bbox.reshape(4)
+                        bbox = process_bbox(bbox, img_shape[1], img_shape[0])
+                        if bbox is None:
+                            continue
+
+                        data_dict = {'img_path': img_path, 'img_shape': img_shape, 'bbox': bbox, 'joints_2d_path': joints_2d_path, 'joints_3d_path': joints_3d_path, 'verts_path': verts_path, 'param_path': param_path}
+                        datalist.append(data_dict)
 
                 elif self.resolution == (2160, 3840): # use cropped and resized images. loading 4K images in pytorch dataloader takes too much time...
                     img_path = osp.join(self.data_path, '3840x2160', img['file_name_3840x2160'].split('/')[-2] + '_crop', img['file_name_3840x2160'].split('/')[-1][:-4] + '_ann_id_' + str(aid) + '.png')
@@ -132,11 +160,54 @@ class AGORA(torch.utils.data.Dataset):
                         img2bb_trans_from_orig = np.array(crop_resize_info['img2bb_trans'], dtype=np.float32)
                         resized_height, resized_width = crop_resize_info['resized_height'], crop_resize_info['resized_width']
                     img_shape = (resized_height, resized_width)
-                    bbox = np.array([0, 0, resized_width, resized_height], dtype=np.float32)
-                    data_dict = {'img_path': img_path, 'img_shape': img_shape, 'bbox': bbox, 'img2bb_trans_from_orig': img2bb_trans_from_orig, 'joints_2d_path': joints_2d_path, 'joints_3d_path': joints_3d_path, 'verts_path': verts_path, 'smplx_param_path': smplx_param_path, 'gender': gender, 'ann_id': str(aid)}
-                    datalist.append(data_dict)
 
-        elif self.data_split == 'test' and self.test_set == 'test':
+                    if cfg.parts == 'body':
+                        joints_2d_path = osp.join(self.data_path, ann['smpl_joints_2d_path'])
+                        joints_3d_path = osp.join(self.data_path, ann['smpl_joints_3d_path'])
+                        verts_path = osp.join(self.data_path, ann['smpl_verts_path'])
+                        param_path = osp.join(self.data_path, ann['smpl_param_path'])
+                        bbox = np.array([0, 0, resized_width, resized_height], dtype=np.float32)
+                        data_dict = {'img_path': img_path, 'img_shape': img_shape, 'bbox': bbox, 'img2bb_trans_from_orig': img2bb_trans_from_orig, 'joints_2d_path': joints_2d_path, 'joints_3d_path': joints_3d_path, 'verts_path': verts_path, 'param_path': param_path}
+                        datalist.append(data_dict)
+
+                    elif cfg.parts == 'hand':
+                        joints_2d_path = osp.join(self.data_path, ann['smplx_joints_2d_path'])
+                        joints_3d_path = osp.join(self.data_path, ann['smplx_joints_3d_path'])
+                        verts_path = osp.join(self.data_path, ann['smplx_verts_path'])
+                        param_path = osp.join(self.data_path, ann['smplx_param_path'])
+
+                        for hand_type in ('left', 'right'):
+                            # convert from original (3840,2160) to cropped space
+                            bbox = np.array(ann[hand_type[0] + 'hand_bbox']).reshape(2,2)
+                            bbox_xy1 = np.concatenate((bbox, np.ones_like(bbox[:,:1])),1)
+                            bbox = np.dot(img2bb_trans_from_orig, bbox_xy1.transpose(1,0)).transpose(1,0)
+                            bbox = bbox.reshape(4)
+                            bbox = process_bbox(bbox, img_shape[1], img_shape[0])
+                            if bbox is None:
+                                continue
+                            data_dict = {'img_path': img_path, 'img_shape': img_shape, 'bbox': bbox, 'img2bb_trans_from_orig': img2bb_trans_from_orig, 'joints_2d_path': joints_2d_path, 'joints_3d_path': joints_3d_path, 'verts_path': verts_path, 'param_path': param_path, 'hand_type': hand_type}
+                            datalist.append(data_dict)
+
+                    elif cfg.parts == 'face':
+                        joints_2d_path = osp.join(self.data_path, ann['smplx_joints_2d_path'])
+                        joints_3d_path = osp.join(self.data_path, ann['smplx_joints_3d_path'])
+                        verts_path = osp.join(self.data_path, ann['smplx_verts_path'])
+                        param_path = osp.join(self.data_path, ann['smplx_param_path'])
+                        
+                        # convert from original (3840,2160) to cropped space
+                        bbox = np.array(ann['face_bbox']).reshape(2,2)
+                        bbox_xy1 = np.concatenate((bbox, np.ones_like(bbox[:,:1])),1)
+                        bbox = np.dot(img2bb_trans_from_orig, bbox_xy1.transpose(1,0)).transpose(1,0)
+                        bbox = bbox.reshape(4)
+                        bbox = process_bbox(bbox, img_shape[1], img_shape[0])
+                        if bbox is None:
+                            continue
+                        data_dict = {'img_path': img_path, 'img_shape': img_shape, 'bbox': bbox, 'img2bb_trans_from_orig': img2bb_trans_from_orig, 'joints_2d_path': joints_2d_path, 'joints_3d_path': joints_3d_path, 'verts_path': verts_path, 'param_path': param_path}
+                        datalist.append(data_dict)
+
+        elif self.data_split == 'test' and self.test_set == 'test': 
+            assert cfg.parts == 'body' # the evaluation server does not support MANO- and FLAME-only evaluations
+
             with open(osp.join(self.data_path, 'AGORA_test_bbox.json')) as f:
                 bboxs = json.load(f)
 
@@ -162,6 +233,7 @@ class AGORA(torch.utils.data.Dataset):
                         img_path = osp.join(self.data_path, '3840x2160', 'test_crop', filename[:-4] + '_pid_' + str(pid) + '.png')
                         json_path = osp.join(self.data_path, '3840x2160', 'test_crop', filename[:-4] + '_pid_' + str(pid) + '.json')
                         if not osp.isfile(json_path):
+                            print(json_path)
                             continue
                         with open(json_path) as f:
                             crop_resize_info = json.load(f)
@@ -171,41 +243,8 @@ class AGORA(torch.utils.data.Dataset):
                         bbox = np.array([0, 0, resized_width, resized_height], dtype=np.float32)
                         datalist.append({'img_path': img_path, 'img_shape': img_shape, 'img2bb_trans_from_orig': img2bb_trans_from_orig, 'bbox': bbox, 'person_idx': pid})
 
+
         return datalist
-
-    def process_hand_face_bbox(self, bbox, do_flip, img_shape, img2bb_trans):
-        if bbox is None:
-            bbox = np.array([0,0,1,1], dtype=np.float32).reshape(2,2) # dummy value
-            bbox_valid = float(False) # dummy value
-        else:
-            # reshape to top-left (x,y) and bottom-right (x,y)
-            bbox = bbox.reshape(2,2) 
-
-            # flip augmentation
-            if do_flip:
-                bbox[:,0] = img_shape[1] - bbox[:,0] - 1
-                bbox[0,0], bbox[1,0] = bbox[1,0].copy(), bbox[0,0].copy() # xmin <-> xmax swap
-            
-            # make four points of the bbox
-            bbox = bbox.reshape(4).tolist()
-            xmin, ymin, xmax, ymax = bbox
-            bbox = np.array([[xmin, ymin], [xmax, ymin], [xmax, ymax], [xmin, ymax]], dtype=np.float32).reshape(4,2)
-
-            # affine transformation (crop, rotation, scale)
-            bbox_xy1 = np.concatenate((bbox, np.ones_like(bbox[:,:1])),1) 
-            bbox = np.dot(img2bb_trans, bbox_xy1.transpose(1,0)).transpose(1,0)[:,:2]
-            bbox[:,0] = bbox[:,0] / cfg.input_img_shape[1] * cfg.output_hm_shape[2]
-            bbox[:,1] = bbox[:,1] / cfg.input_img_shape[0] * cfg.output_hm_shape[1]
-
-            # make box a rectangle without rotation
-            xmin = np.min(bbox[:,0]); xmax = np.max(bbox[:,0]);
-            ymin = np.min(bbox[:,1]); ymax = np.max(bbox[:,1]);
-            bbox = np.array([xmin, ymin, xmax, ymax], dtype=np.float32)
-            
-            bbox_valid = float(True)
-            bbox = bbox.reshape(2,2)
-
-        return bbox, bbox_valid
 
     def __len__(self):
         return len(self.datalist)
@@ -213,14 +252,18 @@ class AGORA(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         data = copy.deepcopy(self.datalist[idx])
         img_path, img_shape, bbox = data['img_path'], data['img_shape'], data['bbox']
-
+        
         # image load
         img = load_img(img_path)
-
-        # affine transform
-        img, img2bb_trans, bb2img_trans, rot, do_flip = augmentation(img, bbox, self.data_split)
-        img = self.transform(img.astype(np.float32))/255.
         
+        # affine transform
+        if cfg.parts == 'hand':
+            img, img2bb_trans, bb2img_trans, rot, do_flip = augmentation(img, bbox, self.data_split, enforce_flip=(data['hand_type'] == 'left')) # enforce flip when left hand to make it right hand
+        else:
+            img, img2bb_trans, bb2img_trans, rot, do_flip = augmentation(img, bbox, self.data_split) 
+        img = self.transform(img.astype(np.float32))/255.
+
+        # train mode
         if self.data_split == 'train':
             # gt load
             with open(data['joints_2d_path']) as f:
@@ -232,109 +275,128 @@ class AGORA(torch.utils.data.Dataset):
                     joint_img[:,1] = joint_img[:,1] / 2160 * self.resolution[0]
             with open(data['joints_3d_path']) as f:
                 joint_cam = np.array(json.load(f)).reshape(-1,3)
-            with open(data['smplx_param_path'], 'rb') as f:
-                smplx_param = pickle.load(f, encoding='latin1')
+            with open(data['param_path'], 'rb') as f:
+                param = pickle.load(f, encoding='latin1')
 
-            # hand and face bbox transform
-            lhand_bbox, rhand_bbox, face_bbox = data['lhand_bbox'], data['rhand_bbox'], data['face_bbox']
-            lhand_bbox, lhand_bbox_valid = self.process_hand_face_bbox(lhand_bbox, do_flip, img_shape, img2bb_trans)
-            rhand_bbox, rhand_bbox_valid = self.process_hand_face_bbox(rhand_bbox, do_flip, img_shape, img2bb_trans)
-            face_bbox, face_bbox_valid = self.process_hand_face_bbox(face_bbox, do_flip, img_shape, img2bb_trans)
-            if do_flip:
-                lhand_bbox, rhand_bbox = rhand_bbox, lhand_bbox
-                lhand_bbox_valid, rhand_bbox_valid = rhand_bbox_valid, lhand_bbox_valid
-            lhand_bbox_center = (lhand_bbox[0] + lhand_bbox[1])/2.; rhand_bbox_center = (rhand_bbox[0] + rhand_bbox[1])/2.; face_bbox_center = (face_bbox[0] + face_bbox[1])/2.
-            lhand_bbox_size = lhand_bbox[1] - lhand_bbox[0]; rhand_bbox_size = rhand_bbox[1] - rhand_bbox[0]; face_bbox_size = face_bbox[1] - face_bbox[0];
-            
-            """
-            # for debug
-            _img = img.numpy().transpose(1,2,0)[:,:,::-1].copy() * 255
-            if lhand_bbox_valid:
-                _tmp = lhand_bbox.copy().reshape(2,2)
+            # body part
+            if cfg.parts == 'body':
+                # coordinates
+                joint_cam = joint_cam - joint_cam[self.joint_set['body']['root_joint_idx'],None,:] # root-relative
+                joint_img = np.concatenate((joint_img[:,:2], joint_cam[:,2:]),1) # x, y, depth
+                joint_valid = np.ones_like(joint_img[:,:1])
+                joint_img, joint_cam, joint_valid, joint_trunc = process_db_coord(joint_img, joint_cam, joint_valid, do_flip, img_shape, self.joint_set['body']['flip_pairs'], img2bb_trans, rot, self.joint_set['body']['joints_name'], smpl.joints_name)
+
+                # smpl parameters
+                root_pose = np.array(param['root_pose'], dtype=np.float32).reshape(-1) # rotation to world coordinate
+                body_pose = np.array(param['body_pose'], dtype=np.float32).reshape(-1)
+                smpl_pose = np.concatenate((root_pose, body_pose))
+                shape = np.array(param['betas'], dtype=np.float32).reshape(-1)[:10] # bug?
+                trans = np.array(param['translation'], dtype=np.float32).reshape(-1) # translation to world coordinate
+                smpl_param = {'pose': smpl_pose, 'shape': shape, 'trans': trans}
+                cam_param = {'focal': cfg.focal, 'princpt': cfg.princpt} # put random camera paraemter as we do not use coordinates from smpl parameters
+                _, _, _, smpl_pose, smpl_shape, _ = process_human_model_output(smpl_param, cam_param, do_flip, img_shape, img2bb_trans, rot, 'smpl')
+                smpl_pose_valid = np.ones((smpl.orig_joint_num*3), dtype=np.float32)
+                smpl_pose_valid[:3] = 0 # global orient of the provided parameter is a rotation to world coordinate system. I want camera coordinate system.
+                
+                """
+                # for debug
+                _tmp = joint_img.copy()
                 _tmp[:,0] = _tmp[:,0] / cfg.output_hm_shape[2] * cfg.input_img_shape[1]
                 _tmp[:,1] = _tmp[:,1] / cfg.output_hm_shape[1] * cfg.input_img_shape[0]
-                cv2.rectangle(_img, (int(_tmp[0,0]), int(_tmp[0,1])), (int(_tmp[1,0]), int(_tmp[1,1])), (255,0,0), 3)
-                cv2.imwrite('agora_' + str(idx) + '_lhand.jpg', _img)
-            if rhand_bbox_valid:
-                _tmp = rhand_bbox.copy().reshape(2,2)
+                _img = img.numpy().transpose(1,2,0)[:,:,::-1].copy() * 255
+                _img = vis_keypoints(_img, _tmp)
+                cv2.imwrite('agora_' + str(idx) + '.jpg', _img)
+                """
+
+                inputs = {'img': img}
+                targets = {'joint_img': joint_img, 'joint_cam': joint_cam, 'smpl_joint_img': joint_img, 'smpl_joint_cam': joint_cam, 'smpl_pose': smpl_pose, 'smpl_shape': smpl_shape}
+                meta_info = {'joint_valid': joint_valid, 'joint_trunc': joint_trunc, 'smpl_joint_valid': np.zeros_like(joint_valid), 'smpl_joint_trunc': np.zeros_like(joint_trunc), 'smpl_pose_valid': smpl_pose_valid, 'smpl_shape_valid': float(True), 'is_3D': float(True)}
+                return inputs, targets, meta_info
+
+            # hand part
+            elif cfg.parts == 'hand':
+                hand_type = data['hand_type']
+                if hand_type == 'left':
+                    joint_img = joint_img[self.joint_set['hand']['orig_to_lhand'],:]
+                    joint_cam = joint_cam[self.joint_set['hand']['orig_to_lhand'],:]
+                    root_pose = np.array(param['global_orient'], dtype=np.float32).reshape(-1) # rotation to world coordinate
+                    lhand_pose = np.array(param['left_hand_pose'], dtype=np.float32).reshape(-1)
+                    mano_pose = np.concatenate((root_pose, lhand_pose))
+                else:
+                    joint_img = joint_img[self.joint_set['hand']['orig_to_rhand'],:]
+                    joint_cam = joint_cam[self.joint_set['hand']['orig_to_rhand'],:]
+                    root_pose = np.array(param['global_orient'], dtype=np.float32).reshape(-1) # rotation to world coordinate
+                    rhand_pose = np.array(param['right_hand_pose'], dtype=np.float32).reshape(-1)
+                    mano_pose = np.concatenate((root_pose, rhand_pose))
+
+                # coordinates
+                joint_cam = joint_cam - joint_cam[self.joint_set['hand']['root_joint_idx'],None,:] # root-relative
+                joint_img = np.concatenate((joint_img[:,:2], joint_cam[:,2:]),1) # x, y, depth
+                joint_valid = np.ones_like(joint_img[:,:1])
+                joint_img, joint_cam, joint_valid, joint_trunc = process_db_coord(joint_img, joint_cam, joint_valid, do_flip, img_shape, self.joint_set['hand']['flip_pairs'], img2bb_trans, rot, self.joint_set['hand']['joints_name'], mano.joints_name)
+                
+                """
+                # for debug
+                _tmp = joint_img.copy()
                 _tmp[:,0] = _tmp[:,0] / cfg.output_hm_shape[2] * cfg.input_img_shape[1]
                 _tmp[:,1] = _tmp[:,1] / cfg.output_hm_shape[1] * cfg.input_img_shape[0]
-                cv2.rectangle(_img, (int(_tmp[0,0]), int(_tmp[0,1])), (int(_tmp[1,0]), int(_tmp[1,1])), (255,0,0), 3)
-                cv2.imwrite('agora_' + str(idx) + '_rhand.jpg', _img)
-            if face_bbox_valid:
-                _tmp = face_bbox.copy().reshape(2,2)
-                _tmp[:,0] = _tmp[:,0] / cfg.output_hm_shape[2] * cfg.input_img_shape[1]
-                _tmp[:,1] = _tmp[:,1] / cfg.output_hm_shape[1] * cfg.input_img_shape[0]
-                cv2.rectangle(_img, (int(_tmp[0,0]), int(_tmp[0,1])), (int(_tmp[1,0]), int(_tmp[1,1])), (255,0,0), 3)
-                cv2.imwrite('agora_' + str(idx) + '_face.jpg', _img)
-            #cv2.imwrite('agora_' + str(idx) + '.jpg', _img)
-            """
-            
-            # coordinates
-            joint_cam = joint_cam - joint_cam[self.joint_set['root_joint_idx'],None,:] # root-relative
-            joint_cam[self.joint_set['joint_part']['lhand'],:] = joint_cam[self.joint_set['joint_part']['lhand'],:] - joint_cam[self.joint_set['lwrist_idx'],None,:] # left hand root-relative
-            joint_cam[self.joint_set['joint_part']['rhand'],:] = joint_cam[self.joint_set['joint_part']['rhand'],:] - joint_cam[self.joint_set['rwrist_idx'],None,:] # right hand root-relative
-            joint_cam[self.joint_set['joint_part']['face'],:] = joint_cam[self.joint_set['joint_part']['face'],:] - joint_cam[self.joint_set['neck_idx'],None,:] # face root-relative
-            joint_img = np.concatenate((joint_img[:,:2], joint_cam[:,2:]),1) # x, y, depth
-            joint_img[self.joint_set['joint_part']['body'],2] = (joint_cam[self.joint_set['joint_part']['body'],2].copy() / (cfg.body_3d_size / 2) + 1)/2. * cfg.output_hm_shape[0] # body depth discretize
-            joint_img[self.joint_set['joint_part']['lhand'],2] = (joint_cam[self.joint_set['joint_part']['lhand'],2].copy() / (cfg.hand_3d_size / 2) + 1)/2. * cfg.output_hm_shape[0] # left hand depth discretize
-            joint_img[self.joint_set['joint_part']['rhand'],2] = (joint_cam[self.joint_set['joint_part']['rhand'],2].copy() / (cfg.hand_3d_size / 2) + 1)/2. * cfg.output_hm_shape[0] # right hand depth discretize
-            joint_img[self.joint_set['joint_part']['face'],2] = (joint_cam[self.joint_set['joint_part']['face'],2].copy() / (cfg.face_3d_size / 2) + 1)/2. * cfg.output_hm_shape[0] # face depth discretize
-            joint_valid = np.ones_like(joint_img[:,:1])
-            joint_img, joint_cam, joint_valid, joint_trunc = process_db_coord(joint_img, joint_cam, joint_valid, do_flip, img_shape, self.joint_set['flip_pairs'], img2bb_trans, rot, self.joint_set['joints_name'], smpl_x.joints_name)
-            
-            """
-            # for debug
-            _tmp = joint_img.copy() 
-            _tmp[:,0] = _tmp[:,0] / cfg.output_hm_shape[2] * cfg.input_img_shape[1]
-            _tmp[:,1] = _tmp[:,1] / cfg.output_hm_shape[1] * cfg.input_img_shape[0]
-            _img = img.numpy().transpose(1,2,0)[:,:,::-1] * 255
-            _img = vis_keypoints(_img.copy(), _tmp)
-            cv2.imwrite('agora_' + str(idx) + '.jpg', _img)
-            """
-            
-            """
-            # for debug
-            _tmp = joint_cam.copy()[:,:2]
-            _tmp[:,0] = _tmp[:,0] / (cfg.body_3d_size / 2) * cfg.input_img_shape[1] + cfg.input_img_shape[1]/2
-            _tmp[:,1] = _tmp[:,1] / (cfg.body_3d_size / 2) * cfg.input_img_shape[0] + cfg.input_img_shape[0]/2
-            _img = np.zeros((cfg.input_img_shape[0], cfg.input_img_shape[1], 3), dtype=np.float32)
-            _img = vis_keypoints(_img.copy(), _tmp)
-            cv2.imwrite('agora_' + str(idx) + '_cam.jpg', _img)
-            """
-            
-            # smplx parameters
-            root_pose = np.array(smplx_param['global_orient'], dtype=np.float32).reshape(-1) # rotation to world coordinate
-            body_pose = np.array(smplx_param['body_pose'], dtype=np.float32).reshape(-1)
-            shape = np.array(smplx_param['betas'], dtype=np.float32).reshape(-1)[:10] # bug?
-            lhand_pose = np.array(smplx_param['left_hand_pose'], dtype=np.float32).reshape(-1)
-            rhand_pose = np.array(smplx_param['right_hand_pose'], dtype=np.float32).reshape(-1)
-            jaw_pose = np.array(smplx_param['jaw_pose'], dtype=np.float32).reshape(-1)
-            expr = np.array(smplx_param['expression'], dtype=np.float32).reshape(-1)
-            gender = data['gender']
-            #gender = 'neutral'
-            trans = np.array(smplx_param['transl'], dtype=np.float32).reshape(-1) # translation to world coordinate
-            cam_param = {'focal': cfg.focal, 'princpt': cfg.princpt} # put random camera paraemter as we do not use coordinates from smplx parameters
-            smplx_param = {'root_pose': root_pose, 'body_pose': body_pose, 'shape': shape,
-                    'lhand_pose': lhand_pose, 'lhand_valid': True, 
-                    'rhand_pose': rhand_pose, 'rhand_valid': True, 
-                    'jaw_pose': jaw_pose, 'expr': expr, 'face_valid': True,
-                    'gender': gender,
-                    'trans': trans}
-            _, _, _, smplx_pose, smplx_shape, smplx_expr, smplx_pose_valid, _, smplx_expr_valid, _ = process_human_model_output(smplx_param, cam_param, do_flip, img_shape, img2bb_trans, rot, 'smplx')
-            smplx_pose_valid = np.tile(smplx_pose_valid[:,None], (1,3)).reshape(-1)
-            smplx_pose_valid[:3] = 0 # global orient of the provided parameter is a rotation to world coordinate system. I want camera coordinate system.
-            smplx_shape_valid = True
+                _img = img.numpy().transpose(1,2,0)[:,:,::-1].copy() * 255
+                _img = vis_keypoints(_img, _tmp)
+                cv2.imwrite('agora_' + str(idx) + '_' + hand_type + '.jpg', _img)
+                """
 
-            if gender == 'male':
-                gender = 0 
-            else:
-                gender = 1 
+                # mano parameters
+                shape = np.array(param['betas'], dtype=np.float32).reshape(-1)[:10] # bug?
+                trans = np.array(param['transl'], dtype=np.float32).reshape(-1) # translation to world coordinate
+                mano_param = {'pose': mano_pose, 'shape': shape, 'trans': trans, 'hand_type': hand_type}
+                cam_param = {'focal': cfg.focal, 'princpt': cfg.princpt} # put random camera paraemter as we do not use coordinates from smplx parameters
+                _, _, _, mano_pose, mano_shape, _ = process_human_model_output(mano_param, cam_param, do_flip, img_shape, img2bb_trans, rot, 'mano')
+                mano_pose_valid = np.ones((mano.orig_joint_num*3), dtype=np.float32)
+                mano_pose_valid[:3] = 0 # global orient of the provided parameter is a rotation to world coordinate system of whole body. I want camera coordinate system of a hand.
 
-            inputs = {'img': img}
-            targets = {'joint_img': joint_img, 'joint_cam': joint_cam, 'smplx_joint_img': joint_img, 'smplx_joint_cam': joint_cam, 'smplx_pose': smplx_pose, 'smplx_shape': smplx_shape, 'smplx_expr': smplx_expr, 'lhand_bbox_center': lhand_bbox_center, 'lhand_bbox_size': lhand_bbox_size, 'rhand_bbox_center': rhand_bbox_center, 'rhand_bbox_size': rhand_bbox_size, 'face_bbox_center': face_bbox_center, 'face_bbox_size': face_bbox_size, 'gender': gender}
-            meta_info = {'joint_valid': joint_valid, 'joint_trunc': joint_trunc, 'smplx_joint_valid': np.zeros_like(joint_valid), 'smplx_joint_trunc': np.zeros_like(joint_trunc), 'smplx_pose_valid': smplx_pose_valid, 'smplx_shape_valid': float(smplx_shape_valid), 'smplx_expr_valid': float(smplx_expr_valid), 'is_3D': float(True), 'lhand_bbox_valid': lhand_bbox_valid, 'rhand_bbox_valid': rhand_bbox_valid, 'face_bbox_valid': face_bbox_valid}
-            return inputs, targets, meta_info
+                inputs = {'img': img}
+                targets = {'joint_img': joint_img, 'mano_joint_img': joint_img, 'joint_cam': joint_cam, 'mano_joint_cam': joint_cam, 'mano_pose': mano_pose, 'mano_shape': mano_shape}
+                meta_info = {'joint_valid': joint_valid, 'joint_trunc': joint_trunc, 'mano_joint_trunc': np.zeros_like(joint_trunc), 'mano_pose_valid': np.zeros_like(mano_pose_valid), 'is_valid_mano_fit': float(True), 'is_3D': float(True)}
+                return inputs, targets, meta_info
+
+            # face part
+            elif cfg.parts == 'face':
+                # change keypoint set to that of flame
+                joint_img = joint_img[self.joint_set['face']['orig_to_face'],:]
+                flame_joint_img = np.zeros((flame.joint_num,3), dtype=np.float32)
+                flame_joint_valid = np.zeros((flame.joint_num,1), dtype=np.float32)
+                for j in range(flame.joint_num):
+                    if self.joint_set['face']['joint_to_flame'][j] == -1:
+                        continue
+                    flame_joint_img[j] = joint_img[self.joint_set['face']['joint_to_flame'][j]]
+                    flame_joint_valid[j] = joint_valid[self.joint_set['face']['joint_to_flame'][j]]
+                joint_img = flame_joint_img
+                joint_valid = flame_joint_valid
+
+                # coordinates
+                joint_cam = joint_cam - joint_cam[self.joint_set['face']['root_joint_idx'],None,:] # root-relative
+                joint_img = np.concatenate((joint_img[:,:2], joint_cam[:,2:]),1) # x, y, depth
+                joint_valid = np.ones_like(joint_img[:,:1])
+                joint_img, joint_cam, joint_valid, joint_trunc = process_db_coord(joint_img, joint_cam, joint_valid, do_flip, img_shape, flame.flip_pairs, img2bb_trans, rot, flame.joints_name, flame.joints_name)
+
+                # flame parameters
+                root_pose = np.array(param['global_orient'], dtype=np.float32).reshape(-1) # rotation to world coordinate
+                shape = np.array(param['betas'], dtype=np.float32).reshape(-1)[:10] # bug?
+                jaw_pose = np.array(param['jaw_pose'], dtype=np.float32).reshape(-1)
+                expr = np.array(param['expression'], dtype=np.float32).reshape(-1)
+                trans = np.array(param['transl'], dtype=np.float32).reshape(-1) # translation to world coordinate
+
+                cam_param = {'focal': cfg.focal, 'princpt': cfg.princpt} # put random camera paraemter as we do not use coordinates from smplx parameters
+                flame_param = {'root_pose': root_pose, 'jaw_pose': jaw_pose, 'shape': shape, 'expr': expr, 'trans': trans}
+                _, _, _, flame_root_pose, flame_jaw_pose, flame_shape, flame_expr, _, _ = process_human_model_output(flame_param, cam_param, do_flip, img_shape, img2bb_trans, rot, 'flame')
+                flame_root_pose_valid = float(False)
+                 
+                inputs = {'img': img}
+                targets = {'joint_img': joint_img, 'joint_cam': joint_cam, 'flame_joint_cam': joint_cam, 'flame_root_pose': flame_root_pose, 'flame_jaw_pose': flame_jaw_pose, 'flame_shape': flame_shape, 'flame_expr': flame_expr}
+                meta_info = {'joint_valid': joint_valid, 'joint_trunc': joint_trunc, 'flame_root_pose_valid': flame_root_pose_valid, 'is_3D': float(True), 'is_valid_flame_fit': float(True)}
+                return inputs, targets, meta_info
+
+        # test mode
         else:
             # load crop and resize information (for the 4K setting)
             if self.resolution == (2160,3840):
@@ -346,91 +408,110 @@ class AGORA(torch.utils.data.Dataset):
                                     )
                 bb2img_trans = np.linalg.inv(img2bb_trans)[:2,:]
 
+            
             if self.test_set == 'val':
-                # gt load
                 with open(data['verts_path']) as f:
                     verts = np.array(json.load(f)).reshape(-1,3)
 
-                inputs = {'img': img}
-                targets = {'smplx_mesh_cam': verts}
-                meta_info = {'bb2img_trans': bb2img_trans}
+                if cfg.parts == 'body':
+                    inputs = {'img': img}
+                    targets = {'smpl_mesh_cam': verts}
+                    meta_info = {'bb2img_trans': bb2img_trans}
+                    return inputs, targets, meta_info
+
+                elif cfg.parts == 'hand':
+                    mano_mesh_cam = verts[smpl_x.hand_vertex_idx[data['hand_type'] + '_hand'],:]
+                    if data['hand_type'] == 'left':
+                        mano_mesh_cam[:,0] *= -1 # flip left hand to right hand
+                    inputs = {'img': img}
+                    targets = {'mano_mesh_cam': mano_mesh_cam}
+                    meta_info = {}
+                    return inputs, targets, meta_info
+
+                elif cfg.parts == 'face':
+                    flame_mesh_cam = verts[smpl_x.face_vertex_idx,:]
+                    inputs = {'img': img}
+                    targets = {'flame_mesh_cam': flame_mesh_cam}
+                    meta_info = {}
+                    return inputs, targets, meta_info
             else:
                 inputs = {'img': img}
-                targets = {'smplx_mesh_cam': np.zeros((smpl_x.vertex_num, 3), dtype=np.float32)} # dummy vertex
+                targets = {'smpl_mesh_cam': np.zeros((smpl.vertex_num, 3), dtype=np.float32)} # dummy vertex
                 meta_info = {'bb2img_trans': bb2img_trans}
-
-            return inputs, targets, meta_info
+                return inputs, targets, meta_info
 
     def evaluate(self, outs, cur_sample_idx):
         annots = self.datalist
         sample_num = len(outs)
-        eval_result = {'pa_mpvpe_all': [], 'pa_mpvpe_hand': [], 'pa_mpvpe_face': [], 'mpvpe_all': [], 'mpvpe_hand': [], 'mpvpe_face': []}
+        eval_result = {'pa_mpvpe': [], 'mpvpe': []}
         for n in range(sample_num):
             annot = annots[cur_sample_idx + n]
             out = outs[n]
-            mesh_gt = out['smplx_mesh_cam_target']
-            mesh_out = out['smplx_mesh_cam']
-           
-            # MPVPE from all vertices
-            mesh_out_align = mesh_out - np.dot(smpl_x.J_regressor, mesh_out)[smpl_x.J_regressor_idx['pelvis'],None,:] + np.dot(smpl_x.J_regressor, mesh_gt)[smpl_x.J_regressor_idx['pelvis'],None,:]
-            eval_result['mpvpe_all'].append(np.sqrt(np.sum((mesh_out_align - mesh_gt)**2,1)).mean() * 1000)
-            mesh_out_align = rigid_align(mesh_out, mesh_gt)
-            eval_result['pa_mpvpe_all'].append(np.sqrt(np.sum((mesh_out_align - mesh_gt)**2,1)).mean() * 1000)
- 
-            # MPVPE from hand vertices
-            mesh_gt_lhand = mesh_gt[smpl_x.hand_vertex_idx['left_hand'],:]
-            mesh_out_lhand = mesh_out[smpl_x.hand_vertex_idx['left_hand'],:]
-            mesh_gt_rhand = mesh_gt[smpl_x.hand_vertex_idx['right_hand'],:]
-            mesh_out_rhand = mesh_out[smpl_x.hand_vertex_idx['right_hand'],:]
-            mesh_out_lhand_align = mesh_out_lhand - np.dot(smpl_x.J_regressor, mesh_out)[smpl_x.J_regressor_idx['lwrist'],None,:] + np.dot(smpl_x.J_regressor, mesh_gt)[smpl_x.J_regressor_idx['lwrist'],None,:]
-            mesh_out_rhand_align = mesh_out_rhand - np.dot(smpl_x.J_regressor, mesh_out)[smpl_x.J_regressor_idx['rwrist'],None,:] + np.dot(smpl_x.J_regressor, mesh_gt)[smpl_x.J_regressor_idx['rwrist'],None,:]
-            eval_result['mpvpe_hand'].append((np.sqrt(np.sum((mesh_out_lhand_align - mesh_gt_lhand)**2,1)).mean() * 1000 + np.sqrt(np.sum((mesh_out_rhand_align - mesh_gt_rhand)**2,1)).mean() * 1000)/2.)
-            mesh_out_lhand_align = rigid_align(mesh_out_lhand, mesh_gt_lhand)
-            mesh_out_rhand_align = rigid_align(mesh_out_rhand, mesh_gt_rhand)
-            eval_result['pa_mpvpe_hand'].append((np.sqrt(np.sum((mesh_out_lhand_align - mesh_gt_lhand)**2,1)).mean() * 1000 + np.sqrt(np.sum((mesh_out_rhand_align - mesh_gt_rhand)**2,1)).mean() * 1000)/2.)
 
-            # MPVPE from face vertices
-            mesh_gt_face = mesh_gt[smpl_x.face_vertex_idx,:]
-            mesh_out_face = mesh_out[smpl_x.face_vertex_idx,:]
-            mesh_out_face_align = mesh_out_face - np.dot(smpl_x.J_regressor, mesh_out)[smpl_x.J_regressor_idx['neck'],None,:] + np.dot(smpl_x.J_regressor, mesh_gt)[smpl_x.J_regressor_idx['neck'],None,:]
-            eval_result['mpvpe_face'].append(np.sqrt(np.sum((mesh_out_face_align - mesh_gt_face)**2,1)).mean() * 1000)
-            mesh_out_face_align = rigid_align(mesh_out_face, mesh_gt_face)
-            eval_result['pa_mpvpe_face'].append(np.sqrt(np.sum((mesh_out_face_align - mesh_gt_face)**2,1)).mean() * 1000)
+            if cfg.parts == 'body':
+                mesh_gt = out['smpl_mesh_cam_target']
+                mesh_out = out['smpl_mesh_cam']
+               
+                mesh_out_align = mesh_out - np.dot(smpl.joint_regressor, mesh_out)[smpl.root_joint_idx,None,:] + np.dot(smpl.joint_regressor, mesh_gt)[smpl.root_joint_idx,None,:]
+                eval_result['mpvpe'].append(np.sqrt(np.sum((mesh_out_align - mesh_gt)**2,1)).mean() * 1000)
+                mesh_out_align = rigid_align(mesh_out, mesh_gt)
+                eval_result['pa_mpvpe'].append(np.sqrt(np.sum((mesh_out_align - mesh_gt)**2,1)).mean() * 1000)
+            
+            elif cfg.parts == 'hand':
+                mesh_gt = out['mano_mesh_cam_target']
+                mesh_out = out['mano_mesh_cam']
+                hand_type = annot['hand_type']
+                if hand_type == 'left':
+                    mesh_out[:,0] = mesh_out[:,0] * -1 # flip back to the left hand
+
+                mesh_out_align = mesh_out - np.dot(mano.joint_regressor, mesh_out)[mano.root_joint_idx,None,:] + np.dot(mano.joint_regressor, mesh_gt)[mano.root_joint_idx,None,:]
+                eval_result['mpvpe'].append(np.sqrt(np.sum((mesh_out_align - mesh_gt)**2,1)).mean() * 1000)
+                mesh_out_align = rigid_align(mesh_out, mesh_gt)
+                eval_result['pa_mpvpe'].append(np.sqrt(np.sum((mesh_out_align - mesh_gt)**2,1)).mean() * 1000)
+
+            elif cfg.parts == 'face':
+                mesh_gt = out['flame_mesh_cam_target']
+                mesh_out = out['flame_mesh_cam']
+
+                mesh_out_align = mesh_out - np.dot(flame.layer.J_regressor, mesh_out)[flame.root_joint_idx,None,:] + np.dot(flame.layer.J_regressor, mesh_gt)[flame.root_joint_idx,None,:]
+                eval_result['mpvpe'].append(np.sqrt(np.sum((mesh_out_align - mesh_gt)**2,1)).mean() * 1000)
+                mesh_out_align = rigid_align(mesh_out, mesh_gt)
+                eval_result['pa_mpvpe'].append(np.sqrt(np.sum((mesh_out_align - mesh_gt)**2,1)).mean() * 1000)
            
             vis = False
             if vis:
-                #img = (out['img'].transpose(1,2,0)[:,:,::-1] * 255).copy()
-                #joint_img = out['joint_img'].copy()
-                #joint_img[:,0] = joint_img[:,0] / cfg.output_hm_shape[2] * cfg.input_img_shape[1]
-                #joint_img[:,1] = joint_img[:,1] / cfg.output_hm_shape[1] * cfg.input_img_shape[0]
-                #for j in range(len(joint_img)):
-                #    cv2.circle(img, (int(joint_img[j][0]), int(joint_img[j][1])), 3, (0,0,255), -1)
-                #cv2.imwrite(str(cur_sample_idx + n) + '.jpg', img)
+                img = (out['img'].transpose(1,2,0)[:,:,::-1] * 255).copy()
+                cv2.imwrite(str(cur_sample_idx + n) + '.jpg', img)
+                
+                if cfg.parts == 'body':
+                    vis_mesh_out = out['smpl_mesh_cam']
+                    vis_mesh_out = vis_mesh_out - np.dot(smpl.joint_regressor, vis_mesh_out)[smpl.root_joint_idx,None,:]
+                    vis_mesh_gt = out['smpl_mesh_cam_target']
+                    vis_mesh_gt = vis_mesh_gt - np.dot(smpl.joint_regressor, vis_mesh_gt)[smpl.root_joint_idx,None,:] 
+                    save_obj(vis_mesh_out, smpl.face, str(cur_sample_idx + n) + '.obj')
+                    save_obj(vis_mesh_gt, smpl.face, str(cur_sample_idx + n) + '_gt.obj')
 
-                img_path = annot['img_path']
-                img_id = img_path.split('/')[-1][:-4]
-                ann_id = annot['ann_id']
-                img = load_img(img_path)[:,:,::-1]
-                bbox = annot['bbox']
-                focal = list(cfg.focal)
-                princpt = list(cfg.princpt)
-                focal[0] = focal[0] / cfg.input_body_shape[1] * bbox[2]
-                focal[1] = focal[1] / cfg.input_body_shape[0] * bbox[3]
-                princpt[0] = princpt[0] / cfg.input_body_shape[1] * bbox[2] + bbox[0]
-                princpt[1] = princpt[1] / cfg.input_body_shape[0] * bbox[3] + bbox[1]
-                img = render_mesh(img, out['smplx_mesh_cam'], smpl_x.face, {'focal': focal, 'princpt': princpt})
-                #img = cv2.resize(img, (512,512))
-                cv2.imwrite(img_id + '_' + str(ann_id) + '.jpg', img)
+                elif cfg.parts == 'hand':
+                    vis_mesh_out = out['mano_mesh_cam']
+                    vis_mesh_out = vis_mesh_out - np.dot(mano.joint_regressor, vis_mesh_out)[mano.root_joint_idx,None,:]
+                    vis_mesh_gt = out['mano_mesh_cam_target']
+                    vis_mesh_gt = vis_mesh_gt - np.dot(mano.joint_regressor, vis_mesh_gt)[mano.root_joint_idx,None,:] 
+                    save_obj(vis_mesh_out, mano.face[hand_type], str(cur_sample_idx + n) + '_' + hand_type + '_.obj')
+                    save_obj(vis_mesh_gt, mano.face[hand_type], str(cur_sample_idx + n) + '_' + hand_type + '_gt.obj')
 
-
-                vis_mesh_out = out['smplx_mesh_cam']
-                vis_mesh_out = vis_mesh_out - np.dot(smpl_x.layer['neutral'].J_regressor, vis_mesh_out)[smpl_x.J_regressor_idx['pelvis'],None,:] 
-                #vis_mesh_gt = out['smplx_mesh_cam_target']
-                #vis_mesh_gt = vis_mesh_gt - np.dot(smpl_x.layer['neutral'].J_regressor, vis_mesh_gt)[smpl_x.J_regressor_idx['pelvis'],None,:] 
-                save_obj(vis_mesh_out, smpl_x.face, img_id + '_' + str(ann_id) + '.obj')
-                #save_obj(vis_mesh_gt, smpl_x.face, str(cur_sample_idx + n) + '_gt.obj')
+                elif cfg.parts == 'face':
+                    vis_mesh_out = out['flame_mesh_cam']
+                    vis_mesh_out = vis_mesh_out - np.dot(flame.layer.J_regressor, vis_mesh_out)[flame.root_joint_idx,None,:]
+                    vis_mesh_gt = out['flame_mesh_cam_target']
+                    vis_mesh_gt = vis_mesh_gt - np.dot(flame.layer.J_regressor, vis_mesh_gt)[flame.root_joint_idx,None,:] 
+                    save_obj(vis_mesh_out, flame.face, str(cur_sample_idx + n) + '.obj')
+                    save_obj(vis_mesh_gt, flame.face, str(cur_sample_idx + n) + '_gt.obj')
 
             
+            # official evaluation server only support body evaluation
+            if cfg.parts != 'body':
+                continue
+
             # save results for the official evaluation codes/server
             save_name = annot['img_path'].split('/')[-1][:-4]
             if self.data_split == 'test' and self.test_set == 'test':
@@ -452,7 +533,7 @@ class AGORA(torch.utils.data.Dataset):
                     person_idx = last_person_idx + 1
             save_name += '_personId_' + str(person_idx) + '.pkl'
 
-            joint_proj = out['smplx_joint_proj']
+            joint_proj = out['smpl_joint_proj']
             joint_proj[:,0] = joint_proj[:,0] / cfg.output_hm_shape[2] * cfg.input_img_shape[1]
             joint_proj[:,1] = joint_proj[:,1] / cfg.output_hm_shape[1] * cfg.input_img_shape[0]
             joint_proj = np.concatenate((joint_proj, np.ones_like(joint_proj[:,:1])),1)
@@ -460,18 +541,11 @@ class AGORA(torch.utils.data.Dataset):
             joint_proj[:,0] = joint_proj[:,0] / self.resolution[1] * 3840 # restore to original resolution
             joint_proj[:,1] = joint_proj[:,1] / self.resolution[0] * 2160 # restore to original resolution
             save_dict = {'params': 
-                                {'transl': out['cam_trans'].reshape(1,-1),
-                                'global_orient': out['smplx_root_pose'].reshape(1,-1),
-                                'body_pose': out['smplx_body_pose'].reshape(1,-1),
-                                'left_hand_pose': out['smplx_lhand_pose'].reshape(1,-1),
-                                'right_hand_pose': out['smplx_rhand_pose'].reshape(1,-1),
-                                'reye_pose': np.zeros((1,3)),
-                                'leye_pose': np.zeros((1,3)),
-                                'jaw_pose': out['smplx_jaw_pose'].reshape(1,-1),
-                                'expression': out['smplx_expr'].reshape(1,-1),
-                                'betas': out['smplx_shape'].reshape(1,-1)},
+                                {'translation': out['cam_trans'].reshape(1,-1),
+                                'root_pose': out['smpl_pose'][:3].reshape(1,-1),
+                                'body_pose': out['smpl_pose'][3:].reshape(1,-1),
+                                'betas': out['smpl_shape'].reshape(1,-1)},
                         'joints': joint_proj.reshape(1,-1,2),
-                        #'gender': 'male' if out['is_male'] else 'female'
                         }
             with open(osp.join(cfg.result_dir, 'AGORA', save_name), 'wb') as f:
                 pickle.dump(save_dict, f)
@@ -491,12 +565,7 @@ class AGORA(torch.utils.data.Dataset):
         if self.data_split == 'test' and self.test_set == 'test': # do not print. just submit the results to the official evaluation server
             return
 
-        print('PA MPVPE (All): %.2f mm' % np.mean(eval_result['pa_mpvpe_all']))
-        print('PA MPVPE (Hands): %.2f mm' % np.mean(eval_result['pa_mpvpe_hand']))
-        print('PA MPVPE (Face): %.2f mm' % np.mean(eval_result['pa_mpvpe_face']))
-
-        print('MPVPE (All): %.2f mm' % np.mean(eval_result['mpvpe_all']))
-        print('MPVPE (Hands): %.2f mm' % np.mean(eval_result['mpvpe_hand']))
-        print('MPVPE (Face): %.2f mm' % np.mean(eval_result['mpvpe_face']))
+        print('PA MPVPE: %.2f mm' % np.mean(eval_result['pa_mpvpe']))
+        print('MPVPE: %.2f mm' % np.mean(eval_result['mpvpe']))
 
 

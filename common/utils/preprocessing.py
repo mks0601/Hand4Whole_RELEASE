@@ -3,7 +3,7 @@ import cv2
 import random
 from config import cfg
 import math
-from utils.human_models import smpl_x, smpl
+from utils.human_models import smpl, mano, flame
 from utils.transforms import cam2pixel, transform_joint_to_other_db
 from plyfile import PlyData, PlyElement
 import torch
@@ -36,25 +36,20 @@ def get_bbox(joint_img, joint_valid, extend_ratio=1.2):
     bbox = np.array([xmin, ymin, xmax - xmin, ymax - ymin]).astype(np.float32)
     return bbox
 
-def sanitize_bbox(bbox, img_width, img_height):
-    x, y, w, h = bbox
-    x1 = np.max((0, x))
-    y1 = np.max((0, y))
-    x2 = np.min((img_width - 1, x1 + np.max((0, w - 1))))
-    y2 = np.min((img_height - 1, y1 + np.max((0, h - 1))))
-    if w*h > 0 and x2 > x1 and y2 > y1:
-        bbox = np.array([x1, y1, x2-x1, y2-y1])
-    else:
-        bbox = None
+def process_bbox(bbox, img_width, img_height, do_sanitize=True):
+    if do_sanitize:
+        # sanitize bboxes
+        x, y, w, h = bbox
+        x1 = np.max((0, x))
+        y1 = np.max((0, y))
+        x2 = np.min((img_width - 1, x1 + np.max((0, w - 1))))
+        y2 = np.min((img_height - 1, y1 + np.max((0, h - 1))))
+        if w*h > 0 and x2 > x1 and y2 > y1:
+            bbox = np.array([x1, y1, x2-x1, y2-y1])
+        else:
+            return None
 
-    return bbox
-
-def process_bbox(bbox, img_width, img_height):
-    bbox = sanitize_bbox(bbox, img_width, img_height)
-    if bbox is None:
-        return bbox
-
-    # aspect ratio preserving bbox
+   # aspect ratio preserving bbox
     w = bbox[2]
     h = bbox[3]
     c_x = bbox[0] + w/2.
@@ -87,11 +82,18 @@ def get_aug_config():
 
     return scale, rot, color_scale, do_flip
 
-def augmentation(img, bbox, data_split):
+def augmentation(img, bbox, data_split, enforce_flip=None):
     if data_split == 'train':
         scale, rot, color_scale, do_flip = get_aug_config()
     else:
         scale, rot, color_scale, do_flip = 1.0, 0.0, np.array([1,1,1]), False
+    
+    if enforce_flip is None:
+        pass
+    elif enforce_flip is True:
+        do_flip = True
+    elif enforce_flip is False:
+        do_flip = False
     
     img, trans, inv_trans = generate_patch_image(img, bbox, scale, rot, do_flip, cfg.input_img_shape)
     img = np.clip(img * color_scale[None,None,:], 0, 255)
@@ -162,7 +164,7 @@ def gen_trans_from_patch_cv(c_x, c_y, src_width, src_height, dst_width, dst_heig
 
 def process_db_coord(joint_img, joint_cam, joint_valid, do_flip, img_shape, flip_pairs, img2bb_trans, rot, src_joints_name, target_joints_name):
     joint_img, joint_cam, joint_valid = joint_img.copy(), joint_cam.copy(), joint_valid.copy()
-    
+
     # flip augmentation
     if do_flip:
         joint_cam[:,0] = -joint_cam[:,0]
@@ -178,11 +180,12 @@ def process_db_coord(joint_img, joint_cam, joint_valid, do_flip, img_shape, flip
     [0, 0, 1]], dtype=np.float32)
     joint_cam = np.dot(rot_aug_mat, joint_cam.transpose(1,0)).transpose(1,0)
 
-    # affine transformation
+    # affine transformation and root-relative depth
     joint_img_xy1 = np.concatenate((joint_img[:,:2], np.ones_like(joint_img[:,:1])),1)
     joint_img[:,:2] = np.dot(img2bb_trans, joint_img_xy1.transpose(1,0)).transpose(1,0)
     joint_img[:,0] = joint_img[:,0] / cfg.input_img_shape[1] * cfg.output_hm_shape[2]
     joint_img[:,1] = joint_img[:,1] / cfg.input_img_shape[0] * cfg.output_hm_shape[1]
+    joint_img[:,2] = (joint_img[:,2] / (cfg.bbox_3d_size / 2) + 1)/2. * cfg.output_hm_shape[0]
     
     # check truncation
     joint_trunc = joint_valid * ((joint_img[:,0] >= 0) * (joint_img[:,0] < cfg.output_hm_shape[2]) * \
@@ -197,95 +200,15 @@ def process_db_coord(joint_img, joint_cam, joint_valid, do_flip, img_shape, flip
     return joint_img, joint_cam, joint_valid, joint_trunc
 
 def process_human_model_output(human_model_param, cam_param, do_flip, img_shape, img2bb_trans, rot, human_model_type):
-    
-    if human_model_type == 'smplx':
-        human_model = smpl_x
-        rotation_valid = np.ones((smpl_x.orig_joint_num), dtype=np.float32)
-        coord_valid = np.ones((smpl_x.joint_num), dtype=np.float32)
 
-        root_pose, body_pose, shape, trans = human_model_param['root_pose'], human_model_param['body_pose'], human_model_param['shape'], human_model_param['trans']
-        if 'lhand_pose' in human_model_param and human_model_param['lhand_valid']:
-            lhand_pose = human_model_param['lhand_pose']
-        else:
-            lhand_pose = np.zeros((3*len(smpl_x.orig_joint_part['lhand'])), dtype=np.float32)
-            rotation_valid[smpl_x.orig_joint_part['lhand']] = 0
-            coord_valid[smpl_x.joint_part['lhand']] = 0
-        if 'rhand_pose' in human_model_param and human_model_param['rhand_valid']:
-            rhand_pose = human_model_param['rhand_pose']
-        else:
-            rhand_pose = np.zeros((3*len(smpl_x.orig_joint_part['rhand'])), dtype=np.float32)
-            rotation_valid[smpl_x.orig_joint_part['rhand']] = 0
-            coord_valid[smpl_x.joint_part['rhand']] = 0
-        if 'jaw_pose' in human_model_param and 'expr' in human_model_param and human_model_param['face_valid']:
-            jaw_pose = human_model_param['jaw_pose']
-            expr = human_model_param['expr']
-            expr_valid = True
-        else:
-            jaw_pose = np.zeros((3), dtype=np.float32)
-            expr = np.zeros((smpl_x.expr_code_dim), dtype=np.float32)
-            rotation_valid[smpl_x.orig_joint_part['face']] = 0
-            coord_valid[smpl_x.joint_part['face']] = 0
-            expr_valid = False
-        if 'gender' in human_model_param:
-            gender = human_model_param['gender']
-        else:
-            gender = 'neutral'
-        root_pose = torch.FloatTensor(root_pose).view(1,3) # (1,3)
-        body_pose = torch.FloatTensor(body_pose).view(-1,3) # (21,3)
-        lhand_pose = torch.FloatTensor(lhand_pose).view(-1,3) # (15,3)
-        rhand_pose = torch.FloatTensor(rhand_pose).view(-1,3) # (15,3)
-        jaw_pose = torch.FloatTensor(jaw_pose).view(-1,3) # (1,3)
-        shape = torch.FloatTensor(shape).view(1,-1) # SMPLX shape parameter
-        expr = torch.FloatTensor(expr).view(1,-1) # SMPLX expression parameter
-        trans = torch.FloatTensor(trans).view(1,-1) # translation vector
-        
-        # apply camera extrinsic (rotation)
-        # merge root pose and camera rotation 
-        if 'R' in cam_param:
-            R = np.array(cam_param['R'], dtype=np.float32).reshape(3,3)
-            root_pose = root_pose.numpy()
-            root_pose, _ = cv2.Rodrigues(root_pose)
-            root_pose, _ = cv2.Rodrigues(np.dot(R,root_pose))
-            root_pose = torch.from_numpy(root_pose).view(1,3)
-
-        # get mesh and joint coordinates
-        zero_pose = torch.zeros((1,3)).float() # eye poses
-        with torch.no_grad():
-            output = smpl_x.layer[gender](betas=shape, body_pose=body_pose.view(1,-1), global_orient=root_pose, transl=trans, left_hand_pose=lhand_pose.view(1,-1), right_hand_pose=rhand_pose.view(1,-1), jaw_pose=jaw_pose.view(1,-1), leye_pose=zero_pose, reye_pose=zero_pose, expression=expr)
-        mesh_cam = output.vertices[0].numpy()
-        joint_cam = output.joints[0].numpy()[smpl_x.joint_idx,:]
-
-        # apply camera exrinsic (translation)
-        # compenstate rotation (translation from origin to root joint was not cancled)
-        if 'R' in cam_param and 't' in cam_param:
-            R, t = np.array(cam_param['R'], dtype=np.float32).reshape(3,3), np.array(cam_param['t'], dtype=np.float32).reshape(1,3)
-            root_cam = joint_cam[smpl_x.root_joint_idx,None,:]
-            joint_cam = joint_cam - root_cam + np.dot(R, root_cam.transpose(1,0)).transpose(1,0) + t
-            mesh_cam = mesh_cam - root_cam + np.dot(R, root_cam.transpose(1,0)).transpose(1,0) + t
-
-        # concat root, body, two hands, and jaw pose
-        pose = torch.cat((root_pose, body_pose, lhand_pose, rhand_pose, jaw_pose))
-        
-        # joint coordinates
-        joint_img = cam2pixel(joint_cam, cam_param['focal'], cam_param['princpt'])
-        joint_cam = joint_cam - joint_cam[smpl_x.root_joint_idx,None,:] # root-relative
-        joint_cam[smpl_x.joint_part['lhand'],:] = joint_cam[smpl_x.joint_part['lhand'],:] - joint_cam[smpl_x.lwrist_idx,None,:] # left hand root-relative
-        joint_cam[smpl_x.joint_part['rhand'],:] = joint_cam[smpl_x.joint_part['rhand'],:] - joint_cam[smpl_x.rwrist_idx,None,:] # right hand root-relative
-        joint_cam[smpl_x.joint_part['face'],:] = joint_cam[smpl_x.joint_part['face'],:] - joint_cam[smpl_x.neck_idx,None,:] # face root-relative
-        joint_img[smpl_x.joint_part['body'],2] = (joint_cam[smpl_x.joint_part['body'],2].copy() / (cfg.body_3d_size / 2) + 1)/2. * cfg.output_hm_shape[0] # body depth discretize
-        joint_img[smpl_x.joint_part['lhand'],2] = (joint_cam[smpl_x.joint_part['lhand'],2].copy() / (cfg.hand_3d_size / 2) + 1)/2. * cfg.output_hm_shape[0] # left hand depth discretize
-        joint_img[smpl_x.joint_part['rhand'],2] = (joint_cam[smpl_x.joint_part['rhand'],2].copy() / (cfg.hand_3d_size / 2) + 1)/2. * cfg.output_hm_shape[0] # right hand depth discretize
-        joint_img[smpl_x.joint_part['face'],2] = (joint_cam[smpl_x.joint_part['face'],2].copy() / (cfg.face_3d_size / 2) + 1)/2. * cfg.output_hm_shape[0] # face depth discretize
-
-    elif human_model_type == 'smpl':
+    if human_model_type == 'smpl':
         human_model = smpl
         pose, shape, trans = human_model_param['pose'], human_model_param['shape'], human_model_param['trans']
         if 'gender' in human_model_param:
             gender = human_model_param['gender']
         else:
             gender = 'neutral'
-        pose = torch.FloatTensor(pose).view(-1,3)
-        shape = torch.FloatTensor(shape).view(1,-1); 
+        pose = torch.FloatTensor(pose).view(-1,3); shape = torch.FloatTensor(shape).view(1,-1); # smpl parameters (pose: 72 dimension, shape: 10 dimension)
         trans = torch.FloatTensor(trans).view(1,-1) # translation vector
         
         # apply camera extrinsic (rotation)
@@ -302,30 +225,25 @@ def process_human_model_output(human_model_param, cam_param, do_flip, img_shape,
         body_pose = torch.cat((pose[:smpl.orig_root_joint_idx,:], pose[smpl.orig_root_joint_idx+1:,:])).view(1,-1)
         with torch.no_grad():
             output = smpl.layer[gender](betas=shape, body_pose=body_pose, global_orient=root_pose, transl=trans)
-        mesh_cam = output.vertices[0].numpy()
-        joint_cam = np.dot(smpl.joint_regressor, mesh_cam)
+        mesh_coord = output.vertices[0].numpy()
+        joint_coord = np.dot(smpl.joint_regressor, mesh_coord)
  
         # apply camera exrinsic (translation)
         # compenstate rotation (translation from origin to root joint was not cancled)
         if 'R' in cam_param and 't' in cam_param:
             R, t = np.array(cam_param['R'], dtype=np.float32).reshape(3,3), np.array(cam_param['t'], dtype=np.float32).reshape(1,3)
-            root_cam = joint_cam[smpl.root_joint_idx,None,:]
-            joint_cam = joint_cam - root_cam + np.dot(R, root_cam.transpose(1,0)).transpose(1,0) + t
-            mesh_cam = mesh_cam - root_cam + np.dot(R, root_cam.transpose(1,0)).transpose(1,0) + t
-        
-        # joint coordinates
-        joint_img = cam2pixel(joint_cam, cam_param['focal'], cam_param['princpt'])
-        joint_cam = joint_cam - joint_cam[smpl.root_joint_idx,None,:] # body root-relative
-        joint_img[:,2] = (joint_cam[:,2].copy() / (cfg.body_3d_size / 2) + 1)/2. * cfg.output_hm_shape[0] # body depth discretize
+            root_coord = joint_coord[smpl.root_joint_idx,None,:]
+            joint_coord = joint_coord - root_coord + np.dot(R, root_coord.transpose(1,0)).transpose(1,0) + t
+            mesh_coord = mesh_coord - root_coord + np.dot(R, root_coord.transpose(1,0)).transpose(1,0) + t
 
     elif human_model_type == 'mano':
         human_model = mano
         pose, shape, trans = human_model_param['pose'], human_model_param['shape'], human_model_param['trans']
         hand_type = human_model_param['hand_type']
-        pose = torch.FloatTensor(pose).view(-1,3)
-        shape = torch.FloatTensor(shape).view(1,-1); 
+        trans = human_model_param['trans']
+        pose = torch.FloatTensor(pose).view(-1,3); shape = torch.FloatTensor(shape).view(1,-1); # mano parameters (pose: 48 dimension, shape: 10 dimension)
         trans = torch.FloatTensor(trans).view(1,-1) # translation vector
-        
+
         # apply camera extrinsic (rotation)
         # merge root pose and camera rotation 
         if 'R' in cam_param:
@@ -334,49 +252,82 @@ def process_human_model_output(human_model_param, cam_param, do_flip, img_shape,
             root_pose, _ = cv2.Rodrigues(root_pose)
             root_pose, _ = cv2.Rodrigues(np.dot(R,root_pose))
             pose[mano.orig_root_joint_idx] = torch.from_numpy(root_pose).view(3)
-
-        # get mesh and joint coordinates
+      
+        # get root joint coordinate
         root_pose = pose[mano.orig_root_joint_idx].view(1,3)
         hand_pose = torch.cat((pose[:mano.orig_root_joint_idx,:], pose[mano.orig_root_joint_idx+1:,:])).view(1,-1)
         with torch.no_grad():
             output = mano.layer[hand_type](betas=shape, hand_pose=hand_pose, global_orient=root_pose, transl=trans)
-        mesh_cam = output.vertices[0].numpy()
-        joint_cam = np.dot(mano.joint_regressor, mesh_cam)
- 
+        mesh_coord = output.vertices[0].numpy()
+        joint_coord = np.dot(mano.joint_regressor, mesh_coord)
+      
         # apply camera exrinsic (translation)
         # compenstate rotation (translation from origin to root joint was not cancled)
         if 'R' in cam_param and 't' in cam_param:
             R, t = np.array(cam_param['R'], dtype=np.float32).reshape(3,3), np.array(cam_param['t'], dtype=np.float32).reshape(1,3)
-            root_cam = joint_cam[mano.root_joint_idx,None,:]
-            joint_cam = joint_cam - root_cam + np.dot(R, root_cam.transpose(1,0)).transpose(1,0) + t
-            mesh_cam = mesh_cam - root_cam + np.dot(R, root_cam.transpose(1,0)).transpose(1,0) + t
-        
-        # joint coordinates
-        joint_img = cam2pixel(joint_cam, cam_param['focal'], cam_param['princpt'])
-        joint_cam = joint_cam - joint_cam[mano.root_joint_idx,None,:] # hand root-relative
-        joint_img[:,2] = (joint_cam[:,2].copy() / (cfg.hand_3d_size / 2) + 1)/2. * cfg.output_hm_shape[0] # hand depth discretize
+            root_coord = joint_coord[mano.root_joint_idx,None,:]
+            joint_coord = joint_coord - root_coord + np.dot(R, root_coord.transpose(1,0)).transpose(1,0) + t
+            mesh_coord = mesh_coord - root_coord + np.dot(R, root_coord.transpose(1,0)).transpose(1,0) + t
 
+    elif human_model_type == 'flame':
+        human_model = flame
+        root_pose, jaw_pose, shape, expr = human_model_param['root_pose'], human_model_param['jaw_pose'], human_model_param['shape'], human_model_param['expr']
+        if 'trans' in human_model_param:
+            trans = human_model_param['trans']
+        else:
+            trans = [0,0,0]
+        root_pose = torch.FloatTensor(root_pose).view(1,3); jaw_pose = torch.FloatTensor(jaw_pose).view(1,3);
+        shape = torch.FloatTensor(shape).view(1,-1); expr = torch.FloatTensor(expr).view(1,-1);
+        zero_pose = torch.zeros((1,3)).float() # neck and eye poses
+        trans = torch.FloatTensor(trans).view(1,-1) # translation vector
+ 
+        # apply camera extrinsic (rotation)
+        # merge root pose and camera rotation 
+        if 'R' in cam_param:
+            R = np.array(cam_param['R'], dtype=np.float32).reshape(3,3)
+            root_pose = root_pose.numpy()
+            root_pose, _ = cv2.Rodrigues(root_pose)
+            root_pose, _ = cv2.Rodrigues(np.dot(R,root_pose))
+            root_pose = torch.from_numpy(root_pose).view(1,3)
+      
+        # get root joint coordinate
+        with torch.no_grad():
+            output = flame.layer(global_orient=root_pose, jaw_pose=jaw_pose, neck_pose=zero_pose, leye_pose=zero_pose, reye_pose=zero_pose, betas=shape, expression=expr, transl=trans)
+        mesh_coord = output.vertices[0].numpy()
+        joint_coord = output.joints[0].numpy()
+      
+        # apply camera exrinsic (translation)
+        # compenstate rotation (translation from origin to root joint was not cancled)
+        if 'R' in cam_param and 't' in cam_param:
+            R, t = np.array(cam_param['R'], dtype=np.float32).reshape(3,3), np.array(cam_param['t'], dtype=np.float32).reshape(1,3)
+            root_coord = joint_coord[flame.root_joint_idx,None,:]
+            joint_coord = joint_coord - root_coord + np.dot(R, root_coord.transpose(1,0)).transpose(1,0) + t
+            mesh_coord = mesh_coord - root_coord + np.dot(R, root_coord.transpose(1,0)).transpose(1,0) + t
+    
+    joint_cam_orig = joint_coord.copy() # back-up the original one
+    mesh_cam_orig = mesh_coord.copy() # back-up the original one
 
-    mesh_cam_orig = mesh_cam.copy() # back-up the original one
-
-    ## so far, data augmentations are not applied yet
-    ## now, apply data augmentations
+    ## so far, joint coordinates are in camera-centered 3D coordinates (data augmentations are not applied yet)
+    ## now, project the 3D coordinates to image space and apply data augmentations
 
     # image projection
+    joint_cam = joint_coord # camera-centered 3D coordinates
+    joint_img = cam2pixel(joint_cam, cam_param['focal'], cam_param['princpt'])
+    joint_cam = joint_cam - joint_cam[human_model.root_joint_idx,None,:] # root-relative
+    joint_img[:,2] = joint_cam[:,2].copy()
     if do_flip:
         joint_cam[:,0] = -joint_cam[:,0]
         joint_img[:,0] = img_shape[1] - 1 - joint_img[:,0]
         for pair in human_model.flip_pairs:
             joint_cam[pair[0], :], joint_cam[pair[1], :] = joint_cam[pair[1], :].copy(), joint_cam[pair[0], :].copy()
             joint_img[pair[0], :], joint_img[pair[1], :] = joint_img[pair[1], :].copy(), joint_img[pair[0], :].copy()
-            if human_model_type == 'smplx':
-                coord_valid[pair[0]], coord_valid[pair[1]] = coord_valid[pair[1]].copy(), coord_valid[pair[0]].copy()
 
     # x,y affine transform, root-relative depth
     joint_img_xy1 = np.concatenate((joint_img[:,:2], np.ones_like(joint_img[:,0:1])),1)
     joint_img[:,:2] = np.dot(img2bb_trans, joint_img_xy1.transpose(1,0)).transpose(1,0)[:,:2]
     joint_img[:,0] = joint_img[:,0] / cfg.input_img_shape[1] * cfg.output_hm_shape[2]
     joint_img[:,1] = joint_img[:,1] / cfg.input_img_shape[0] * cfg.output_hm_shape[1]
+    joint_img[:,2] = (joint_img[:,2] / (cfg.bbox_3d_size / 2) + 1)/2. * cfg.output_hm_shape[0]
     
     # check truncation
     joint_trunc = ((joint_img[:,0] >= 0) * (joint_img[:,0] < cfg.output_hm_shape[2]) * \
@@ -390,45 +341,43 @@ def process_human_model_output(human_model_param, cam_param, do_flip, img_shape,
     # coordinate
     joint_cam = np.dot(rot_aug_mat, joint_cam.transpose(1,0)).transpose(1,0)
     # parameters
-    # flip pose parameter (axis-angle)
-    if do_flip:
-        for pair in human_model.orig_flip_pairs:
-            pose[pair[0], :], pose[pair[1], :] = pose[pair[1], :].clone(), pose[pair[0], :].clone()
-            if human_model_type == 'smplx':
-                rotation_valid[pair[0]], rotation_valid[pair[1]] = rotation_valid[pair[1]].copy(), rotation_valid[pair[0]].copy()
-        pose[:,1:3] *= -1 # multiply -1 to y and z axis of axis-angle
+    if human_model_type == 'flame':
+        # flip pose parameter (axis-angle)
+        if do_flip:
+            root_pose[:,1:3] *= -1 # multiply -1 to y and z axis of axis-angle
+            jaw_pose[:,1:3] *= -1
+        # rotate root pose
+        root_pose = root_pose.numpy()
+        root_pose, _ = cv2.Rodrigues(root_pose)
+        root_pose, _ = cv2.Rodrigues(np.dot(rot_aug_mat,root_pose))
+        root_pose = root_pose.reshape(-1)
+    else:
+        # flip pose parameter (axis-angle)
+        if do_flip:
+            for pair in human_model.orig_flip_pairs:
+                pose[pair[0], :], pose[pair[1], :] = pose[pair[1], :].clone(), pose[pair[0], :].clone()
+            pose[:,1:3] *= -1 # multiply -1 to y and z axis of axis-angle
+        # rotate root pose
+        pose = pose.numpy()
+        root_pose = pose[human_model.orig_root_joint_idx,:]
+        root_pose, _ = cv2.Rodrigues(root_pose)
+        root_pose, _ = cv2.Rodrigues(np.dot(rot_aug_mat,root_pose))
+        pose[human_model.orig_root_joint_idx] = root_pose.reshape(3)
     
-    # rotate root pose
-    pose = pose.numpy()
-    root_pose = pose[human_model.orig_root_joint_idx,:]
-    root_pose, _ = cv2.Rodrigues(root_pose)
-    root_pose, _ = cv2.Rodrigues(np.dot(rot_aug_mat,root_pose))
-    pose[human_model.orig_root_joint_idx] = root_pose.reshape(3)
-    
-    # change to mean shape if beta is too far from it
-    shape[(shape.abs() > 3).any(dim=1)] = 0.
-    shape = shape.numpy().reshape(-1)
-   
     # return results
-    if human_model_type == 'smplx':
-        pose = pose.reshape(-1)
+    if human_model_type == 'flame':
+        jaw_pose = jaw_pose.numpy().reshape(-1)
+        # change to mean shape if beta is too far from it
+        shape[(shape.abs() > 3).any(dim=1)] = 0.
+        shape = shape.numpy().reshape(-1)
         expr = expr.numpy().reshape(-1)
-        return joint_img, joint_cam, joint_trunc, pose, shape, expr, rotation_valid, coord_valid, expr_valid, mesh_cam_orig
-    elif human_model_type == 'smpl':
+        return joint_img, joint_cam, joint_trunc, root_pose, jaw_pose, shape, expr, joint_cam_orig, mesh_cam_orig
+    else:
         pose = pose.reshape(-1)
+        # change to mean shape if beta is too far from it
+        shape[(shape.abs() > 3).any(dim=1)] = 0.
+        shape = shape.numpy().reshape(-1)
         return joint_img, joint_cam, joint_trunc, pose, shape, mesh_cam_orig
-    elif human_model_type == 'mano':
-        pose = pose.reshape(-1)
-        return joint_img, joint_cam, joint_trunc, pose, shape, mesh_cam_orig
-
-def get_fitting_error_3D(db_joint, db_joint_from_fit, joint_valid):
-    # mask coordinate
-    db_joint = db_joint[np.tile(joint_valid,(1,3)) == 1].reshape(-1,3)
-    db_joint_from_fit = db_joint_from_fit[np.tile(joint_valid,(1,3)) == 1].reshape(-1,3)
-
-    db_joint_from_fit = db_joint_from_fit - np.mean(db_joint_from_fit,0)[None,:] + np.mean(db_joint,0)[None,:] # translation alignment
-    error = np.sqrt(np.sum((db_joint - db_joint_from_fit)**2,1)).mean()
-    return error
 
 def load_obj(file_name):
     v = []
@@ -439,13 +388,5 @@ def load_obj(file_name):
             x,y,z = float(words[1]), float(words[2]), float(words[3])
             v.append(np.array([x,y,z]))
     return np.stack(v)
-
-def load_ply(file_name):
-    plydata = PlyData.read(file_name)
-    x = plydata['vertex']['x']
-    y = plydata['vertex']['y']
-    z = plydata['vertex']['z']
-    v = np.stack((x,y,z),1)
-    return v
 
 

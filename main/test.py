@@ -9,6 +9,7 @@ from base import Tester
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--gpu', type=str, dest='gpu_ids')
+    parser.add_argument('--parts', type=str, dest='parts')
     parser.add_argument('--test_epoch', type=str, dest='test_epoch')
     args = parser.parse_args()
 
@@ -22,12 +23,13 @@ def parse_args():
         args.gpu_ids = ','.join(map(lambda x: str(x), list(range(*gpus))))
     
     assert args.test_epoch, 'Test epoch is required.'
+    assert args.parts, 'Please enter human parts among [body, hand, face]'
     return args
 
 def main():
 
     args = parse_args()
-    cfg.set_args(args.gpu_ids)
+    cfg.set_args(args.gpu_ids, args.parts)
     cudnn.benchmark = True
 
     tester = Tester(args.test_epoch)
@@ -36,6 +38,7 @@ def main():
     
     eval_result = {}
     cur_sample_idx = 0
+    times = []
     for itr, (inputs, targets, meta_info) in enumerate(tqdm(tester.batch_generator)):
         
         # forward

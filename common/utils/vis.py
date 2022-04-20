@@ -4,11 +4,11 @@ import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+from config import cfg
 import os
 os.environ["PYOPENGL_PLATFORM"] = "egl"
 import pyrender
 import trimesh
-from config import cfg
 
 def vis_keypoints_with_skeleton(img, kps, kps_lines, kp_thresh=0.4, alpha=1):
     # Convert from plt 0-1 RGBA colors to 0-255 BGR colors for opencv.
@@ -116,14 +116,6 @@ def vis_3d_skeleton(kpt_3d, kpt_3d_vis, kps_lines, filename=None):
     plt.show()
     cv2.waitKey(0)
 
-def save_obj(v, f, file_name='output.obj'):
-    obj_file = open(file_name, 'w')
-    for i in range(len(v)):
-        obj_file.write('v ' + str(v[i][0]) + ' ' + str(v[i][1]) + ' ' + str(v[i][2]) + '\n')
-    for i in range(len(f)):
-        obj_file.write('f ' + str(f[i][0]+1) + '/' + str(f[i][0]+1) + ' ' + str(f[i][1]+1) + '/' + str(f[i][1]+1) + ' ' + str(f[i][2]+1) + '/' + str(f[i][2]+1) + '\n')
-    obj_file.close()
-
 def render_mesh(img, mesh, face, cam_param):
     # mesh
     mesh = trimesh.Trimesh(mesh, face)
@@ -160,3 +152,12 @@ def render_mesh(img, mesh, face, cam_param):
     # save to image
     img = rgb * valid_mask + img * (1-valid_mask)
     return img
+
+def save_obj(v, f, file_name='output.obj'):
+    obj_file = open(file_name, 'w')
+    for i in range(len(v)):
+        obj_file.write('v ' + str(v[i][0]) + ' ' + str(v[i][1]) + ' ' + str(v[i][2]) + '\n')
+    for i in range(len(f)):
+        obj_file.write('f ' + str(f[i][0]+1) + '/' + str(f[i][0]+1) + ' ' + str(f[i][1]+1) + '/' + str(f[i][1]+1) + ' ' + str(f[i][2]+1) + '/' + str(f[i][2]+1) + '\n')
+    obj_file.close()
+

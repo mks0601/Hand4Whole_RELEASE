@@ -20,11 +20,3 @@ class ParamLoss(nn.Module):
         loss = torch.abs(param_out - param_gt) * valid
         return loss
 
-class CELoss(nn.Module):
-    def __init__(self):
-        super(CELoss, self).__init__()
-        self.ce_loss = nn.CrossEntropyLoss(reduction='none')
-
-    def forward(self, out, gt_index):
-        loss = self.ce_loss(out, gt_index)
-        return loss

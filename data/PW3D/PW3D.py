@@ -7,9 +7,9 @@ import json
 import copy
 from pycocotools.coco import COCO
 from config import cfg
-from utils.human_models import smpl_x, smpl
+from utils.human_models import smpl
 from utils.preprocessing import load_img, process_bbox, augmentation, process_human_model_output
-from utils.transforms import rigid_align
+from utils.transforms import pixel2cam, rigid_align, transform_joint_to_other_db
 from utils.vis import vis_keypoints, vis_mesh, save_obj
 
 class PW3D(torch.utils.data.Dataset):
@@ -19,15 +19,14 @@ class PW3D(torch.utils.data.Dataset):
         self.data_path = osp.join('..', 'data', 'PW3D', 'data')
        
         # H36M joint set
-        self.joint_set_h36m = { \
-                            'joint_num': 17,
+        self.joint_set_h36m = {'body': \
+                            {'joint_num': 17,
                             'joints_name': ('Pelvis', 'R_Hip', 'R_Knee', 'R_Ankle', 'L_Hip', 'L_Knee', 'L_Ankle', 'Torso', 'Neck', 'Head', 'Head_top', 'L_Shoulder', 'L_Elbow', 'L_Wrist', 'R_Shoulder', 'R_Elbow', 'R_Wrist'),
                             'eval_joint': (1, 2, 3, 4, 5, 6, 8, 10, 11, 12, 13, 14, 15, 16),
-                            'smpl_regressor': np.load(osp.join('..', 'data', 'Human36M', 'J_regressor_h36m_smpl.npy')),
-                            'smplx_regressor': np.load(osp.join('..', 'data', 'Human36M', 'J_regressor_h36m_smplx.npy'))
-                            
+                            'smpl_regressor': np.load(osp.join('..', 'data', 'Human36M', 'J_regressor_h36m_smpl.npy'))
+                            }
                         }
-        self.joint_set_h36m['root_joint_idx'] = self.joint_set_h36m['joints_name'].index('Pelvis')
+        self.joint_set_h36m['body']['root_joint_idx'] = self.joint_set_h36m['body']['joints_name'].index('Pelvis')
 
         self.datalist = self.load_data()
 
@@ -70,79 +69,54 @@ class PW3D(torch.utils.data.Dataset):
 
         inputs = {'img': img}
         targets = {'smpl_mesh_cam': smpl_mesh_cam_orig}
-        meta_info = {}
+        meta_info = {'bbox': bbox, 'bb2img_trans': bb2img_trans}
         return inputs, targets, meta_info
         
     def evaluate(self, outs, cur_sample_idx):
         annots = self.datalist
         sample_num = len(outs)
-        eval_result = {'mpjpe': [], 'pa_mpjpe': []}
+        eval_result = {'mpjpe': [], 'pa_mpjpe': [], 'mpvpe': [], 'pa_mpvpe': []}
         for n in range(sample_num):
             annot = annots[cur_sample_idx + n]
             out = outs[n]
-            
+   
             # h36m joint from gt mesh
             mesh_gt_cam = out['smpl_mesh_cam_target']
-            joint_gt_h36m = np.dot(self.joint_set_h36m['smpl_regressor'], mesh_gt_cam)
-            joint_gt_h36m = joint_gt_h36m - joint_gt_h36m[self.joint_set_h36m['root_joint_idx'],None] # root-relative
-            joint_gt_h36m = joint_gt_h36m[self.joint_set_h36m['eval_joint'],:]
-            mesh_gt_cam -= np.dot(self.joint_set_h36m['smpl_regressor'], mesh_gt_cam)[self.joint_set_h36m['root_joint_idx'],None,:]
+            pose_coord_gt_h36m = np.dot(self.joint_set_h36m['body']['smpl_regressor'], mesh_gt_cam)
+            pose_coord_gt_h36m = pose_coord_gt_h36m - pose_coord_gt_h36m[self.joint_set_h36m['body']['root_joint_idx'],None] # root-relative
+            pose_coord_gt_h36m = pose_coord_gt_h36m[self.joint_set_h36m['body']['eval_joint'],:]
+            mesh_gt_cam -= np.dot(self.joint_set_h36m['body']['smpl_regressor'], mesh_gt_cam)[0,None,:]
             
             # h36m joint from output mesh
-            mesh_out_cam = out['smplx_mesh_cam']
-            joint_out_h36m = np.dot(self.joint_set_h36m['smplx_regressor'], mesh_out_cam)
-            joint_out_h36m = joint_out_h36m - joint_out_h36m[self.joint_set_h36m['root_joint_idx'],None] # root-relative
-            joint_out_h36m = joint_out_h36m[self.joint_set_h36m['eval_joint'],:]
-            joint_out_h36m_aligned = rigid_align(joint_out_h36m, joint_gt_h36m)
-            eval_result['mpjpe'].append(np.sqrt(np.sum((joint_out_h36m - joint_gt_h36m)**2,1)).mean() * 1000) # meter -> milimeter
-            eval_result['pa_mpjpe'].append(np.sqrt(np.sum((joint_out_h36m_aligned - joint_gt_h36m)**2,1)).mean() * 1000) # meter -> milimeter
-            mesh_out_cam -= np.dot(self.joint_set_h36m['smplx_regressor'], mesh_out_cam)[self.joint_set_h36m['root_joint_idx'],None,:]
+            mesh_out_cam = out['smpl_mesh_cam']
+            pose_coord_out_h36m = np.dot(self.joint_set_h36m['body']['smpl_regressor'], mesh_out_cam)
+            pose_coord_out_h36m = pose_coord_out_h36m - pose_coord_out_h36m[self.joint_set_h36m['body']['root_joint_idx'],None] # root-relative
+            pose_coord_out_h36m = pose_coord_out_h36m[self.joint_set_h36m['body']['eval_joint'],:]
+            pose_coord_out_h36m_aligned = rigid_align(pose_coord_out_h36m, pose_coord_gt_h36m)
+            eval_result['mpjpe'].append(np.sqrt(np.sum((pose_coord_out_h36m - pose_coord_gt_h36m)**2,1)).mean() * 1000) # meter -> milimeter
+            eval_result['pa_mpjpe'].append(np.sqrt(np.sum((pose_coord_out_h36m_aligned - pose_coord_gt_h36m)**2,1)).mean() * 1000) # meter -> milimeter
+            mesh_out_cam -= np.dot(self.joint_set_h36m['body']['smpl_regressor'], mesh_out_cam)[0,None,:]
+            mesh_out_cam_aligned = rigid_align(mesh_out_cam, mesh_gt_cam)
+            eval_result['mpvpe'].append(np.sqrt(np.sum((mesh_out_cam - mesh_gt_cam)**2,1)).mean() * 1000) # meter -> milimeter
+            eval_result['pa_mpvpe'].append(np.sqrt(np.sum((mesh_out_cam_aligned - mesh_gt_cam)**2,1)).mean() * 1000) # meter -> milimeter
 
-            vis = True
+
+            vis = False
             if vis:
-                """
                 file_name = str(cur_sample_idx+n)
                 img = (out['img'].transpose(1,2,0)[:,:,::-1] * 255).copy()
-                cv2.imwrite(file_name + '.jpg', img)
-                #save_obj(mesh_gt_cam, smpl.face, file_name + '_gt.obj')
-                save_obj(mesh_out_cam, smpl_x.face, file_name + '.obj')
-                """
-                
-                """
-                img_path = annot['img_path']
-                img = load_img(img_path)[:,:,::-1]
-                bbox = annot['bbox']
-                focal = list(cfg.focal)
-                princpt = list(cfg.princpt)
-                focal[0] = focal[0] / cfg.input_body_shape[1] * bbox[2]
-                focal[1] = focal[1] / cfg.input_body_shape[0] * bbox[3]
-                princpt[0] = princpt[0] / cfg.input_body_shape[1] * bbox[2] + bbox[0]
-                princpt[1] = princpt[1] / cfg.input_body_shape[0] * bbox[3] + bbox[1]
-                img = render_mesh(img, out['smplx_mesh_cam'], smpl_x.face, {'focal': focal, 'princpt': princpt})
-                #img = cv2.resize(img, (512,512))
-                cv2.imwrite(img_id + '_' + str(ann_id) + '.jpg', img)
-                """
-                
-                ann_id = annot['ann_id']
-                bbox = annot['bbox']
-                focal = list(cfg.focal)
-                princpt = list(cfg.princpt)
-                focal[0] = focal[0] / cfg.input_body_shape[1] * bbox[2]
-                focal[1] = focal[1] / cfg.input_body_shape[0] * bbox[3]
-                princpt[0] = princpt[0] / cfg.input_body_shape[1] * bbox[2] + bbox[0]
-                princpt[1] = princpt[1] / cfg.input_body_shape[0] * bbox[3] + bbox[1]
-                param_save = {'smplx_param': {'root_pose': out['smplx_root_pose'].tolist(), 'body_pose': out['smplx_body_pose'].tolist(), 'lhand_pose': out['smplx_lhand_pose'].tolist(), 'rhand_pose': out['smplx_rhand_pose'].tolist(), 'jaw_pose': out['smplx_jaw_pose'].tolist(), 'shape': out['smplx_shape'].tolist(), 'expr': out['smplx_expr'].tolist(), 'trans': out['cam_trans'].tolist()},
-                        'cam_param': {'focal': focal, 'princpt': princpt}
-                        }
-                with open(str(ann_id) + '.json', 'w') as f:
-                    json.dump(param_save, f)
+                save_obj(mesh_gt_cam, smpl.face, file_name + '_gt.obj')
+                save_obj(mesh_out_cam, smpl.face, file_name + '.obj')
 
-
+                
         return eval_result
 
     def print_eval_result(self, eval_result):
         print('MPJPE: %.2f mm' % np.mean(eval_result['mpjpe']))
         print('PA MPJPE: %.2f mm' % np.mean(eval_result['pa_mpjpe']))
+        print('MPVPE: %.2f mm' % np.mean(eval_result['mpvpe']))
+        print('PA MPVPE: %.2f mm' % np.mean(eval_result['pa_mpvpe']))
+
 
 
 

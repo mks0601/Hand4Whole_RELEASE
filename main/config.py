@@ -6,42 +6,26 @@ import numpy as np
 class Config:
     
     ## dataset
-    trainset_3d = ['Human36M']
-    trainset_2d = ['MSCOCO', 'MPII'] 
-    testset = 'EHF'
+    trainset_3d = ['Human36M'] 
+    trainset_2d = ['MSCOCO', 'MPII']
+    testset = 'PW3D'
 
     ## model setting
     resnet_type = 50
-    hand_resnet_type = 50
-    face_resnet_type = 18
     
-    ## input, output
-    input_img_shape = (512, 384) 
-    input_body_shape = (256, 192)
-    output_hm_shape = (8, 8, 6)
-    input_hand_shape = (256, 256)
-    output_hand_hm_shape = (8, 8, 8)
-    input_face_shape = (192, 192)
-    focal = (5000, 5000) # virtual focal lengths
-    princpt = (input_body_shape[1]/2, input_body_shape[0]/2) # virtual principal point position
-    body_3d_size = 2
-    hand_3d_size = 0.3
-    face_3d_size = 0.3
-    camera_3d_size = 2.5
-
     ## training config
+    lr = 1e-4
     lr_dec_factor = 10
-    lr_dec_epoch = [4,6] #[40, 60] #[4,6]
-    end_epoch = 7 #70 #7
-    train_batch_size = 24
+    train_batch_size = 48
 
     ## testing config
     test_batch_size = 64
 
     ## others
-    num_thread = 16
+    num_thread = 40
     gpu_ids = '0'
     num_gpus = 1
+    parts = 'body'
     continue_train = False
     
     ## directory
@@ -55,13 +39,40 @@ class Config:
     result_dir = osp.join(output_dir, 'result')
     human_model_path = osp.join(root_dir, 'common', 'utils', 'human_model_files')
     
-    def set_args(self, gpu_ids, lr=1e-4, continue_train=False):
+    def set_args(self, gpu_ids, parts, continue_train=False):
         self.gpu_ids = gpu_ids
         self.num_gpus = len(self.gpu_ids.split(','))
-        self.lr = float(lr)
+        self.parts = parts
         self.continue_train = continue_train
         os.environ["CUDA_VISIBLE_DEVICES"] = self.gpu_ids
         print('>>> Using GPU: {}'.format(self.gpu_ids))
+
+        if self.parts == 'body':
+            self.bbox_3d_size = 2
+            self.camera_3d_size = 2.5
+            self.input_img_shape = (256, 192)
+            self.output_hm_shape = (8, 8, 6)
+            self.lr_dec_epoch = [4, 6]
+            self.end_epoch = 7
+        elif self.parts == 'hand':
+            self.bbox_3d_size = 0.3
+            self.camera_3d_size = 0.4
+            self.input_img_shape = (256, 256)
+            self.output_hm_shape = (8, 8, 8)
+            self.lr_dec_epoch = [10, 12] 
+            self.end_epoch = 13 
+        elif self.parts == 'face':
+            self.bbox_3d_size = 0.3
+            self.camera_3d_size = 0.4
+            self.input_img_shape = (256, 192)
+            self.output_hm_shape = (8, 8, 6)
+            self.lr_dec_epoch = [10, 12] 
+            self.end_epoch = 13 
+        else:
+            assert 0, 'Unknown parts: ' + self.parts
+        
+        self.focal = (5000, 5000) # virtual focal lengths
+        self.princpt = (self.input_img_shape[1]/2, self.input_img_shape[0]/2) # virtual principal point position
 
 cfg = Config()
 

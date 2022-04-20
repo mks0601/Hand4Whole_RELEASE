@@ -54,14 +54,14 @@ class Trainer(Base):
             total_params += list(module.parameters())
         optimizer = torch.optim.Adam(total_params, lr=cfg.lr)
         return optimizer
-        
+
     def save_model(self, state, epoch):
         file_path = osp.join(cfg.model_dir,'snapshot_{}.pth.tar'.format(str(epoch)))
 
-        # do not save smplx layer weights
+        # do not save human model layer weights
         dump_key = []
         for k in state['network'].keys():
-            if 'smplx_layer' in k:
+            if 'smpl_layer' in k or 'mano_layer' in k or 'flame_layer' in k:
                 dump_key.append(k)
         for k in dump_key:
             state['network'].pop(k, None)

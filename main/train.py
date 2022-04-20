@@ -8,29 +8,27 @@ from tqdm import tqdm
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--gpu', type=str, dest='gpu_ids')
-    parser.add_argument('--lr', type=str, dest='lr')
+    parser.add_argument('--parts', type=str, dest='parts')
     parser.add_argument('--continue', dest='continue_train', action='store_true')
     args = parser.parse_args()
 
     if not args.gpu_ids:
         assert 0, "Please set propoer gpu ids"
-
-    if not args.lr:
-        assert 0, "Please set learning rate"
-
+ 
     if '-' in args.gpu_ids:
         gpus = args.gpu_ids.split('-')
         gpus[0] = int(gpus[0])
         gpus[1] = int(gpus[1]) + 1
         args.gpu_ids = ','.join(map(lambda x: str(x), list(range(*gpus))))
 
+    assert args.parts, 'Please enter human parts among [body, hand, face]'
     return args
 
 def main():
     
     # argument parse and create log
     args = parse_args()
-    cfg.set_args(args.gpu_ids, args.lr, args.continue_train)
+    cfg.set_args(args.gpu_ids, args.parts, args.continue_train)
     cudnn.benchmark = True
 
     trainer = Trainer()
