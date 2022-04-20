@@ -471,7 +471,7 @@ class AGORA(torch.utils.data.Dataset):
                                 'expression': out['smplx_expr'].reshape(1,-1),
                                 'betas': out['smplx_shape'].reshape(1,-1)},
                         'joints': joint_proj.reshape(1,-1,2),
-                        #'gender': 'male' if out['is_male'] else 'female'
+                        'gender': 'male' if out['is_male'] else 'female'
                         }
             with open(osp.join(cfg.result_dir, 'AGORA', save_name), 'wb') as f:
                 pickle.dump(save_dict, f)
