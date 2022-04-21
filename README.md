@@ -7,6 +7,7 @@
 
 <p align="middle">
 <img src="assets/3DPW_1.gif" width="720" height="240"><img src="assets/3DPW_2.gif" width="720" height="240">
+</p>
 
 High-resolution video link: [here](https://youtu.be/Ym_CH8yxBso)
 
@@ -160,6 +161,19 @@ to test body-only Pose2Pose on the GPU 0,1,2,3 with60th epoch trained model. `--
 * Download body-only Pose2Pose fine-tuned on AGORA from [here](https://drive.google.com/file/d/1DjJcKUzEtYD9uMzvuh7ixgmaxTonP5vK/view?usp=sharing).
 * Download hand-only Pose2Pose trained on FreiHAND+InterHand2.6M+MSCOCO from [here](https://drive.google.com/drive/folders/1zzCsRwGj58GNvxb9_yWk9GVPnHK5LP4s?usp=sharing).
 * Download face-only Pose2Pose trained on FFHQ+MSCOCO from [here](https://drive.google.com/file/d/1LFhdpvKVtrEK6kzI0NTalx99tv64q5_Z/view?usp=sharing).
+
+## Results
+
+### 3D body-only and hand-only results
+<p align="middle">
+<img src="assets/AGORA_SMPL.PNG" width="450" height="300">
+</p>
+
+
+<p align="middle">
+<img src="assets/3DPW.PNG" width="360" height="264">
+<img src="assets/FreiHAND.PNG" width="360" height="264">
+</p>
 
 ## Troubleshoots
 * `RuntimeError: Subtraction, the '-' operator, with a bool tensor is not supported. If you are trying to invert a mask, use the '~' or 'logical_not()' operator instead.`: Go to [here](https://github.com/mks0601/I2L-MeshNet_RELEASE/issues/6#issuecomment-675152527)
