@@ -171,7 +171,7 @@ For the 3D body-only and hand-only codes, visit [here](https://github.com/mks060
 
 <p align="middle">
 <img src="assets/3DPW.PNG" width="360" height="264">
-<img src="assets/FreiHAND.PNG" width="360" height="275">
+<img src="assets/FreiHAND.PNG" width="360" height="264">
 </p>
 
 
