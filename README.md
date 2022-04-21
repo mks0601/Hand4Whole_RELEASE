@@ -87,7 +87,7 @@ ${ROOT}
 
 ```
 
-* Download AGORA parsed data [[data](https://drive.google.com/drive/folders/1ZaoYEON2WX9O_8gyPVsnBO2hph8v6lPS?usp=sharing)][parsing codes will be available soon]
+* Download AGORA parsed data [[data](https://drive.google.com/drive/folders/1ZaoYEON2WX9O_8gyPVsnBO2hph8v6lPS?usp=sharing)][[parsing codes](tool/AGORA)]
 * Download Human3.6M parsed data and SMPL-X parameters [[data](https://drive.google.com/drive/folders/1kgVH-GugrLoc9XyvP6nRoaFpw3TmM5xK?usp=sharing)][[SMPL-X parameters from NeuralAnnot](https://drive.google.com/drive/folders/1opns6ta471PPzvVhhm9Anv5HMd5hCdoj?usp=sharing)]
 * Download MPII parsed data and SMPL-X parameters [[data](https://drive.google.com/drive/folders/1MmQ2FRP0coxHGk0Ntj0JOGv9OxSNuCfK?usp=sharing)][[SMPL-X parameters from NeuralAnnot](https://drive.google.com/file/d/13YsJra9b_EONRexNxG7k1F9zp10SiWt5/view?usp=sharing)]
 * Download MPI-INF-3DHP parsed data and SMPL-X parameters [[data](https://drive.google.com/drive/folders/1oHzb4oJHPZllLgN_yjyatp1LdqdP0R61?usp=sharing)][[SMPL-X parameters from NeuralAnnot](https://drive.google.com/file/d/1lBJyu95xN4EhDyDA1GLkLqlh0SfAKU9a/view?usp=sharing)]
