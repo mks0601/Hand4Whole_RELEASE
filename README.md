@@ -7,6 +7,7 @@
 
 <p align="middle">
 <img src="assets/3DPW_1.gif" width="720" height="240"><img src="assets/3DPW_2.gif" width="720" height="240">
+</p>
 
 High-resolution video link: [here](https://youtu.be/Ym_CH8yxBso)
 
@@ -152,6 +153,23 @@ to test Hand4Whole on the GPU 0,1,2,3 with60th epoch trained model. `--gpu 0,1,2
 ## Models
 * Download Hand4Whole trained on H36M+MPII+MSCOCO from [here](https://drive.google.com/file/d/1fHF_llZSxbjJNL_Gsz_NbiWAfb1fSsNZ/view?usp=sharing).
 * Download Hand4Whole fine-tuned on AGORA (with gender classification) from [here](https://drive.google.com/file/d/1iEc0uPhhKTH-QVuf-qH-IpYWuNeb2jfP/view?usp=sharing).
+
+## Results
+
+### 3D whole-body results
+<p align="middle">
+<img src="assets/AGORA_SMPLX.PNG" width="480" height="160">
+<img src="assets/EHF.PNG" width="480" height="160">
+</p>
+
+### 3D body-only and hand-only results
+For the 3D body-only and hand-only codes, visit [here](https://github.com/mks0601/Hand4Whole_RELEASE/tree/Pose2Pose).
+<p align="middle">
+<img src="assets/AGORA_SMPL.PNG" width="480" height="160">
+<img src="assets/3DPW.PNG" width="360" height="480">
+<img src="assets/FreiHAND.PNG" width="360" height="480">
+</p>
+
 
 ## Troubleshoots
 * `RuntimeError: Subtraction, the '-' operator, with a bool tensor is not supported. If you are trying to invert a mask, use the '~' or 'logical_not()' operator instead.`: Go to [here](https://github.com/mks0601/I2L-MeshNet_RELEASE/issues/6#issuecomment-675152527)
