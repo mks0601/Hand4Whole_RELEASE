@@ -166,6 +166,10 @@ to test Hand4Whole on the GPU 0,1,2,3 with60th epoch trained model. `--gpu 0,1,2
 For the 3D body-only and hand-only codes, visit [here](https://github.com/mks0601/Hand4Whole_RELEASE/tree/Pose2Pose).
 <p align="middle">
 <img src="assets/AGORA_SMPL.PNG" width="450" height="300">
+</p>
+
+
+<p align="middle">
 <img src="assets/3DPW.PNG" width="360" height="264">
 <img src="assets/FreiHAND.PNG" width="360" height="275">
 </p>
