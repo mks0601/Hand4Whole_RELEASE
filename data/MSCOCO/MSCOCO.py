@@ -78,7 +78,7 @@ class MSCOCO(torch.utils.data.Dataset):
                 with open(osp.join(self.annot_path, 'MSCOCO_train_MANO_NeuralAnnot.json')) as f:
                     mano_params = json.load(f)
             if cfg.parts == 'face':
-                with open(osp.join(self.annot_path, 'coco_smplifyx_train_FLAME.json')) as f:
+                with open(osp.join(self.annot_path, 'MSCOCO_train_FLAME_NeuralAnnot.json')) as f:
                     flame_params = json.load(f)
         else:
             db = COCO(osp.join(self.annot_path, 'coco_wholebody_val_v1.0.json'))
