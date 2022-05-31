@@ -136,18 +136,33 @@ class AGORA(torch.utils.data.Dataset):
                         resized_height, resized_width = crop_resize_info['resized_height'], crop_resize_info['resized_width']
                     img_shape = (resized_height, resized_width)
                     bbox = np.array([0, 0, resized_width, resized_height], dtype=np.float32)
-
-                    lhand_bbox = np.array(ann['lhand_bbox']).reshape(4)
+                    
+                    # transform from original image to crop_and_resize image
+                    lhand_bbox = np.array(ann['lhand_bbox']).reshape(2,2)
+                    lhand_bbox[1] += lhand_bbox[0] # xywh -> xyxy
+                    lhand_bbox = np.dot(img2bb_trans_from_orig, np.concatenate((lhand_bbox, np.ones_like(lhand_bbox[:,:1])),1).transpose(1,0)).transpose(1,0) 
+                    lhand_bbox[1] -= lhand_bbox[0] # xyxy -> xywh
+                    lhand_bbox = lhand_bbox.reshape(4)
                     lhand_bbox = sanitize_bbox(lhand_bbox, self.resolution[1], self.resolution[0])
                     if lhand_bbox is not None:
                         lhand_bbox[2:] += lhand_bbox[:2] # xywh -> xyxy
 
-                    rhand_bbox = np.array(ann['rhand_bbox']).reshape(4)
+                    # transform from original image to crop_and_resize image
+                    rhand_bbox = np.array(ann['rhand_bbox']).reshape(2,2)
+                    rhand_bbox[1] += rhand_bbox[0] # xywh -> xyxy
+                    rhand_bbox = np.dot(img2bb_trans_from_orig, np.concatenate((rhand_bbox, np.ones_like(rhand_bbox[:,:1])),1).transpose(1,0)).transpose(1,0) 
+                    rhand_bbox[1] -= rhand_bbox[0] # xyxy -> xywh
+                    rhand_bbox = rhand_bbox.reshape(4)
                     rhand_bbox = sanitize_bbox(rhand_bbox, self.resolution[1], self.resolution[0])
                     if rhand_bbox is not None:
                         rhand_bbox[2:] += rhand_bbox[:2] # xywh -> xyxy
 
-                    face_bbox = np.array(ann['face_bbox']).reshape(4)
+                    # transform from original image to crop_and_resize image
+                    face_bbox = np.array(ann['face_bbox']).reshape(2,2)
+                    face_bbox[1] += face_bbox[0] # xywh -> xyxy
+                    face_bbox = np.dot(img2bb_trans_from_orig, np.concatenate((face_bbox, np.ones_like(face_bbox[:,:1])),1).transpose(1,0)).transpose(1,0) 
+                    face_bbox[1] -= face_bbox[0] # xyxy -> xywh
+                    face_bbox = face_bbox.reshape(4)
                     face_bbox = sanitize_bbox(face_bbox, self.resolution[1], self.resolution[0])
                     if face_bbox is not None:
                         face_bbox[2:] += face_bbox[:2] # xywh -> xyxy
@@ -255,20 +270,6 @@ class AGORA(torch.utils.data.Dataset):
 
             # hand and face bbox transform
             lhand_bbox, rhand_bbox, face_bbox = data['lhand_bbox'], data['rhand_bbox'], data['face_bbox']
-            if self.resolution == (2160, 3840):
-                # transform from original image to crop_and_resize image
-                if lhand_bbox is not None:
-                    lhand_bbox = lhand_bbox.reshape(2,2)
-                    lhand_bbox = np.dot(data['img2bb_trans_from_orig'], np.concatenate((lhand_bbox, np.ones_like(lhand_bbox[:,:1])),1).transpose(1,0)).transpose(1,0) 
-                    lhand_bbox = lhand_bbox.reshape(4)
-                if rhand_bbox is not None:
-                    rhand_bbox = rhand_bbox.reshape(2,2)
-                    rhand_bbox = np.dot(data['img2bb_trans_from_orig'], np.concatenate((rhand_bbox, np.ones_like(rhand_bbox[:,:1])),1).transpose(1,0)).transpose(1,0) 
-                    rhand_bbox = rhand_bbox.reshape(4)
-                if face_bbox is not None:
-                    face_bbox = face_bbox.reshape(2,2)
-                    face_bbox = np.dot(data['img2bb_trans_from_orig'], np.concatenate((face_bbox, np.ones_like(face_bbox[:,:1])),1).transpose(1,0)).transpose(1,0)
-                    face_bbox = face_bbox.reshape(4)
             lhand_bbox, lhand_bbox_valid = self.process_hand_face_bbox(lhand_bbox, do_flip, img_shape, img2bb_trans)
             rhand_bbox, rhand_bbox_valid = self.process_hand_face_bbox(rhand_bbox, do_flip, img_shape, img2bb_trans)
             face_bbox, face_bbox_valid = self.process_hand_face_bbox(face_bbox, do_flip, img_shape, img2bb_trans)
