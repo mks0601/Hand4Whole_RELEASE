@@ -12,9 +12,13 @@ import argparse
 
 def parse_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--dataset_path', type=str, dest='dataset_path')
     parser.add_argument('--out_height', type=str, dest='out_height')
     parser.add_argument('--out_width', type=str, dest='out_width')
     args = parser.parse_args()
+    
+    if not args.dataset_path:
+        assert 0, "Please set dataset_path"
 
     if not args.out_height or not args.out_width:
         assert 0, "Please set output (height and width. For example, --out_height 512 --out_width 384"
@@ -168,7 +172,7 @@ from torch.utils.data import DataLoader
 
 # argument parse
 args = parse_args()
-dataset = AGORA(int(args.out_height), int(args.out_width))
+dataset = AGORA(args.dataset_path, int(args.out_height), int(args.out_width))
 batch_size = 128
 num_workers = 32
 batch_generator = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)

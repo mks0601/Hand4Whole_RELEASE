@@ -3,9 +3,18 @@ import torch
 import os.path as osp
 import pickle
 from tqdm import tqdm
+import argparse
 
-root_path = '/mnt/disk3/AGORA/smpl_gt'
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--dataset_path', type=str, dest='dataset_path')
+    args = parser.parse_args()
 
+    if not args.dataset_path:
+        assert 0, "Please set dataset_path"
+    return args
+
+root_path = osp.join(args.dataset_path, 'smpl_gt')
 folder_path_list = glob(osp.join(root_path, '*'))
 for folder_path in folder_path_list:
     pkl_path_list = glob(osp.join(folder_path, '*.pkl'))
