@@ -19,7 +19,7 @@ class AGORA(torch.utils.data.Dataset):
         self.transform = transform
         self.data_split = data_split
         self.data_path = osp.join('..', 'data', 'AGORA', 'data')
-        self.resolution = (2160, 3840) # height, width. one of (720, 1280) and (2160, 3840)
+        self.resolution = (720, 1280) # height, width. one of (720, 1280) and (2160, 3840)
         self.test_set = 'val' # val, test
 
         # AGORA joint set
@@ -102,22 +102,25 @@ class AGORA(torch.utils.data.Dataset):
                     lhand_bbox[:,0] = lhand_bbox[:,0] / 3840 * 1280
                     lhand_bbox[:,1] = lhand_bbox[:,1] / 2160 * 720
                     lhand_bbox = lhand_bbox.reshape(4)
-                    lhand_bbox[2:] += lhand_bbox[:2] # xywh -> xyxy
                     lhand_bbox = sanitize_bbox(lhand_bbox, img_shape[1], img_shape[0])
+                    if lhand_bbox is not None:
+                        lhand_bbox[2:] += lhand_bbox[:2] # xywh -> xyxy
 
                     rhand_bbox = np.array(ann['rhand_bbox']).reshape(2,2)
                     rhand_bbox[:,0] = rhand_bbox[:,0] / 3840 * 1280
                     rhand_bbox[:,1] = rhand_bbox[:,1] / 2160 * 720
                     rhand_bbox = rhand_bbox.reshape(4)
-                    rhand_bbox[2:] += rhand_bbox[:2] # xywh -> xyxy
                     rhand_bbox = sanitize_bbox(rhand_bbox, img_shape[1], img_shape[0])
+                    if rhand_bbox is not None:
+                        rhand_bbox[2:] += rhand_bbox[:2] # xywh -> xyxy
 
                     face_bbox = np.array(ann['face_bbox']).reshape(2,2)
                     face_bbox[:,0] = face_bbox[:,0] / 3840 * 1280
                     face_bbox[:,1] = face_bbox[:,1] / 2160 * 720
                     face_bbox = face_bbox.reshape(4)
-                    face_bbox[2:] += face_bbox[:2] # xywh -> xyxy
                     face_bbox = sanitize_bbox(face_bbox, img_shape[1], img_shape[0])
+                    if face_bbox is not None:
+                        face_bbox[2:] += face_bbox[:2] # xywh -> xyxy
 
                     data_dict = {'img_path': img_path, 'img_shape': img_shape, 'bbox': bbox, 'lhand_bbox': lhand_bbox, 'rhand_bbox': rhand_bbox, 'face_bbox': face_bbox, 'joints_2d_path': joints_2d_path, 'joints_3d_path': joints_3d_path, 'verts_path': verts_path, 'smplx_param_path': smplx_param_path, 'gender': gender, 'ann_id': str(aid)}
                     datalist.append(data_dict)
@@ -133,7 +136,23 @@ class AGORA(torch.utils.data.Dataset):
                         resized_height, resized_width = crop_resize_info['resized_height'], crop_resize_info['resized_width']
                     img_shape = (resized_height, resized_width)
                     bbox = np.array([0, 0, resized_width, resized_height], dtype=np.float32)
-                    data_dict = {'img_path': img_path, 'img_shape': img_shape, 'bbox': bbox, 'img2bb_trans_from_orig': img2bb_trans_from_orig, 'joints_2d_path': joints_2d_path, 'joints_3d_path': joints_3d_path, 'verts_path': verts_path, 'smplx_param_path': smplx_param_path, 'gender': gender, 'ann_id': str(aid)}
+
+                    lhand_bbox = np.array(ann['lhand_bbox']).reshape(4)
+                    lhand_bbox = sanitize_bbox(lhand_bbox, self.resolution[1], self.resolution[0])
+                    if lhand_bbox is not None:
+                        lhand_bbox[2:] += lhand_bbox[:2] # xywh -> xyxy
+
+                    rhand_bbox = np.array(ann['rhand_bbox']).reshape(4)
+                    rhand_bbox = sanitize_bbox(rhand_bbox, self.resolution[1], self.resolution[0])
+                    if rhand_bbox is not None:
+                        rhand_bbox[2:] += rhand_bbox[:2] # xywh -> xyxy
+
+                    face_bbox = np.array(ann['face_bbox']).reshape(4)
+                    face_bbox = sanitize_bbox(face_bbox, self.resolution[1], self.resolution[0])
+                    if face_bbox is not None:
+                        face_bbox[2:] += face_bbox[:2] # xywh -> xyxy
+
+                    data_dict = {'img_path': img_path, 'img_shape': img_shape, 'bbox': bbox, 'lhand_bbox': lhand_bbox, 'rhand_bbox': rhand_bbox, 'face_bbox': face_bbox, 'img2bb_trans_from_orig': img2bb_trans_from_orig, 'joints_2d_path': joints_2d_path, 'joints_3d_path': joints_3d_path, 'verts_path': verts_path, 'smplx_param_path': smplx_param_path, 'gender': gender, 'ann_id': str(aid)}
                     datalist.append(data_dict)
 
         elif self.data_split == 'test' and self.test_set == 'test':
@@ -220,16 +239,15 @@ class AGORA(torch.utils.data.Dataset):
         # affine transform
         img, img2bb_trans, bb2img_trans, rot, do_flip = augmentation(img, bbox, self.data_split)
         img = self.transform(img.astype(np.float32))/255.
-        
+       
         if self.data_split == 'train':
             # gt load
             with open(data['joints_2d_path']) as f:
                 joint_img = np.array(json.load(f)).reshape(-1,2)
                 if self.resolution == (2160, 3840):
                     joint_img[:,:2] = np.dot(data['img2bb_trans_from_orig'], np.concatenate((joint_img, np.ones_like(joint_img[:,:1])),1).transpose(1,0)).transpose(1,0) # transform from original image to crop_and_resize image
-                else:
-                    joint_img[:,0] = joint_img[:,0] / 3840 * self.resolution[1]
-                    joint_img[:,1] = joint_img[:,1] / 2160 * self.resolution[0]
+                joint_img[:,0] = joint_img[:,0] / 3840 * self.resolution[1]
+                joint_img[:,1] = joint_img[:,1] / 2160 * self.resolution[0]
             with open(data['joints_3d_path']) as f:
                 joint_cam = np.array(json.load(f)).reshape(-1,3)
             with open(data['smplx_param_path'], 'rb') as f:
@@ -237,6 +255,13 @@ class AGORA(torch.utils.data.Dataset):
 
             # hand and face bbox transform
             lhand_bbox, rhand_bbox, face_bbox = data['lhand_bbox'], data['rhand_bbox'], data['face_bbox']
+            if self.resolution == (2160, 3840):
+                # transform from original image to crop_and_resize image
+                lhand_bbox, rhand_bbox, face_bbox = lhand_bbox.reshape(2,2), rhand_bbox.reshape(2,2), face_bbox.reshape(2,2)
+                lhand_bbox = np.dot(data['img2bb_trans_from_orig'], np.concatenate((lhand_bbox, np.ones_like(lhand_bbox[:,:1])),1).transpose(1,0)).transpose(1,0) 
+                rhand_bbox = np.dot(data['img2bb_trans_from_orig'], np.concatenate((rhand_bbox, np.ones_like(rhand_bbox[:,:1])),1).transpose(1,0)).transpose(1,0) 
+                face_bbox = np.dot(data['img2bb_trans_from_orig'], np.concatenate((face_bbox, np.ones_like(face_bbox[:,:1])),1).transpose(1,0)).transpose(1,0) 
+                lhand_bbox, rhand_bbox, face_bbox = lhand_bbox.reshape(4), rhand_bbox.reshape(4), face_bbox.reshape(4)
             lhand_bbox, lhand_bbox_valid = self.process_hand_face_bbox(lhand_bbox, do_flip, img_shape, img2bb_trans)
             rhand_bbox, rhand_bbox_valid = self.process_hand_face_bbox(rhand_bbox, do_flip, img_shape, img2bb_trans)
             face_bbox, face_bbox_valid = self.process_hand_face_bbox(face_bbox, do_flip, img_shape, img2bb_trans)
@@ -337,7 +362,7 @@ class AGORA(torch.utils.data.Dataset):
             return inputs, targets, meta_info
         else:
             # load crop and resize information (for the 4K setting)
-            if self.resolution == (2160,3840):
+            if self.resolution == (2160, 3840):
                 img2bb_trans = np.dot(
                                     np.concatenate((img2bb_trans,
                                                     np.array([0,0,1], dtype=np.float32).reshape(1,3))),
@@ -345,6 +370,7 @@ class AGORA(torch.utils.data.Dataset):
                                                     np.array([0,0,1], dtype=np.float32).reshape(1,3)))
                                     )
                 bb2img_trans = np.linalg.inv(img2bb_trans)[:2,:]
+                img2bb_trans = img2bb_trans[:2,:]
 
             if self.test_set == 'val':
                 # gt load
