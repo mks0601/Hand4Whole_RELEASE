@@ -28,6 +28,7 @@
 * The human detection results are from YOLO v5.
 
 ## Final directory
+```
 ${PATH1}
 |-- AGORA_train.json
 |-- AGORA_validation.json
@@ -79,6 +80,5 @@ ${PATH1}
 |   |-- validation_crop
 |   |-- test
 |   |-- test_crop
-
-
+```
 
