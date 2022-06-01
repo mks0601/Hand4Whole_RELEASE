@@ -79,7 +79,6 @@ class AGORA(torch.utils.data.Dataset):
                 if not ann['is_valid']:
                     continue
                 
-                gender = ann['gender']
                 joints_2d_path = osp.join(self.data_path, ann['smplx_joints_2d_path'])
                 joints_3d_path = osp.join(self.data_path, ann['smplx_joints_3d_path'])
                 verts_path = osp.join(self.data_path, ann['smplx_verts_path'])
@@ -122,7 +121,7 @@ class AGORA(torch.utils.data.Dataset):
                     if face_bbox is not None:
                         face_bbox[2:] += face_bbox[:2] # xywh -> xyxy
 
-                    data_dict = {'img_path': img_path, 'img_shape': img_shape, 'bbox': bbox, 'lhand_bbox': lhand_bbox, 'rhand_bbox': rhand_bbox, 'face_bbox': face_bbox, 'joints_2d_path': joints_2d_path, 'joints_3d_path': joints_3d_path, 'verts_path': verts_path, 'smplx_param_path': smplx_param_path, 'gender': gender, 'ann_id': str(aid)}
+                    data_dict = {'img_path': img_path, 'img_shape': img_shape, 'bbox': bbox, 'lhand_bbox': lhand_bbox, 'rhand_bbox': rhand_bbox, 'face_bbox': face_bbox, 'joints_2d_path': joints_2d_path, 'joints_3d_path': joints_3d_path, 'verts_path': verts_path, 'smplx_param_path': smplx_param_path, 'ann_id': str(aid)}
                     datalist.append(data_dict)
 
                 elif self.resolution == (2160, 3840): # use cropped and resized images. loading 4K images in pytorch dataloader takes too much time...
@@ -167,7 +166,7 @@ class AGORA(torch.utils.data.Dataset):
                     if face_bbox is not None:
                         face_bbox[2:] += face_bbox[:2] # xywh -> xyxy
 
-                    data_dict = {'img_path': img_path, 'img_shape': img_shape, 'bbox': bbox, 'lhand_bbox': lhand_bbox, 'rhand_bbox': rhand_bbox, 'face_bbox': face_bbox, 'img2bb_trans_from_orig': img2bb_trans_from_orig, 'joints_2d_path': joints_2d_path, 'joints_3d_path': joints_3d_path, 'verts_path': verts_path, 'smplx_param_path': smplx_param_path, 'gender': gender, 'ann_id': str(aid)}
+                    data_dict = {'img_path': img_path, 'img_shape': img_shape, 'bbox': bbox, 'lhand_bbox': lhand_bbox, 'rhand_bbox': rhand_bbox, 'face_bbox': face_bbox, 'img2bb_trans_from_orig': img2bb_trans_from_orig, 'joints_2d_path': joints_2d_path, 'joints_3d_path': joints_3d_path, 'verts_path': verts_path, 'smplx_param_path': smplx_param_path, 'ann_id': str(aid)}
                     datalist.append(data_dict)
 
         elif self.data_split == 'test' and self.test_set == 'test':
@@ -344,28 +343,20 @@ class AGORA(torch.utils.data.Dataset):
             rhand_pose = np.array(smplx_param['right_hand_pose'], dtype=np.float32).reshape(-1)
             jaw_pose = np.array(smplx_param['jaw_pose'], dtype=np.float32).reshape(-1)
             expr = np.array(smplx_param['expression'], dtype=np.float32).reshape(-1)
-            gender = data['gender']
-            #gender = 'neutral'
             trans = np.array(smplx_param['transl'], dtype=np.float32).reshape(-1) # translation to world coordinate
             cam_param = {'focal': cfg.focal, 'princpt': cfg.princpt} # put random camera paraemter as we do not use coordinates from smplx parameters
             smplx_param = {'root_pose': root_pose, 'body_pose': body_pose, 'shape': shape,
                     'lhand_pose': lhand_pose, 'lhand_valid': True, 
                     'rhand_pose': rhand_pose, 'rhand_valid': True, 
                     'jaw_pose': jaw_pose, 'expr': expr, 'face_valid': True,
-                    'gender': gender,
                     'trans': trans}
             _, _, _, smplx_pose, smplx_shape, smplx_expr, smplx_pose_valid, _, smplx_expr_valid, _ = process_human_model_output(smplx_param, cam_param, do_flip, img_shape, img2bb_trans, rot, 'smplx')
             smplx_pose_valid = np.tile(smplx_pose_valid[:,None], (1,3)).reshape(-1)
             smplx_pose_valid[:3] = 0 # global orient of the provided parameter is a rotation to world coordinate system. I want camera coordinate system.
             smplx_shape_valid = True
 
-            if gender == 'male':
-                gender = 0 
-            else:
-                gender = 1 
-
             inputs = {'img': img}
-            targets = {'joint_img': joint_img, 'joint_cam': joint_cam, 'smplx_joint_img': joint_img, 'smplx_joint_cam': joint_cam, 'smplx_pose': smplx_pose, 'smplx_shape': smplx_shape, 'smplx_expr': smplx_expr, 'lhand_bbox_center': lhand_bbox_center, 'lhand_bbox_size': lhand_bbox_size, 'rhand_bbox_center': rhand_bbox_center, 'rhand_bbox_size': rhand_bbox_size, 'face_bbox_center': face_bbox_center, 'face_bbox_size': face_bbox_size, 'gender': gender}
+            targets = {'joint_img': joint_img, 'joint_cam': joint_cam, 'smplx_joint_img': joint_img, 'smplx_joint_cam': joint_cam, 'smplx_pose': smplx_pose, 'smplx_shape': smplx_shape, 'smplx_expr': smplx_expr, 'lhand_bbox_center': lhand_bbox_center, 'lhand_bbox_size': lhand_bbox_size, 'rhand_bbox_center': rhand_bbox_center, 'rhand_bbox_size': rhand_bbox_size, 'face_bbox_center': face_bbox_center, 'face_bbox_size': face_bbox_size}
             meta_info = {'joint_valid': joint_valid, 'joint_trunc': joint_trunc, 'smplx_joint_valid': np.zeros_like(joint_valid), 'smplx_joint_trunc': np.zeros_like(joint_trunc), 'smplx_pose_valid': smplx_pose_valid, 'smplx_shape_valid': float(smplx_shape_valid), 'smplx_expr_valid': float(smplx_expr_valid), 'is_3D': float(True), 'lhand_bbox_valid': lhand_bbox_valid, 'rhand_bbox_valid': rhand_bbox_valid, 'face_bbox_valid': face_bbox_valid}
             return inputs, targets, meta_info
         else:
@@ -504,8 +495,7 @@ class AGORA(torch.utils.data.Dataset):
                                 'jaw_pose': out['smplx_jaw_pose'].reshape(1,-1),
                                 'expression': out['smplx_expr'].reshape(1,-1),
                                 'betas': out['smplx_shape'].reshape(1,-1)},
-                        'joints': joint_proj.reshape(1,-1,2),
-                        'gender': 'male' if out['is_male'] else 'female'
+                        'joints': joint_proj.reshape(1,-1,2)
                         }
             with open(osp.join(cfg.result_dir, 'AGORA', save_name), 'wb') as f:
                 pickle.dump(save_dict, f)

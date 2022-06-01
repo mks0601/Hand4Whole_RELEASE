@@ -26,9 +26,7 @@ class Model(nn.Module):
         self.face_roi_net = face_roi_net
         self.face_regressor = face_regressor
 
-        self.smplx_layer_neutral = copy.deepcopy(smpl_x.layer['neutral']).cuda()
-        self.smplx_layer_male = copy.deepcopy(smpl_x.layer['male']).cuda()
-        self.smplx_layer_female = copy.deepcopy(smpl_x.layer['female']).cuda()
+        self.smplx_layer = copy.deepcopy(smpl_x.layer['neutral']).cuda()
 
         self.coord_loss = CoordLoss()
         self.param_loss = ParamLoss()
@@ -45,32 +43,24 @@ class Model(nn.Module):
         cam_trans = torch.cat((t_xy, t_z[:,None]),1)
         return cam_trans
 
-    def get_coord(self, root_pose, body_pose, lhand_pose, rhand_pose, jaw_pose, shape, expr, cam_trans, gender, mode):
+    def get_coord(self, root_pose, body_pose, lhand_pose, rhand_pose, jaw_pose, shape, expr, cam_trans, mode):
         batch_size = root_pose.shape[0]
         zero_pose = torch.zeros((1,3)).float().cuda().repeat(batch_size,1) # eye poses
-        if len(cfg.trainset_3d) == 1 and cfg.trainset_3d[0] == 'AGORA' and len(cfg.trainset_2d) == 0:
-            is_male = (F.softmax(gender,1)[:,0] > F.softmax(gender,1)[:,1]).float()
-            output = self.smplx_layer_male(betas=shape, body_pose=body_pose, global_orient=root_pose, right_hand_pose=rhand_pose, left_hand_pose=lhand_pose, jaw_pose=jaw_pose, leye_pose=zero_pose, reye_pose=zero_pose, expression=expr)
-            output_female = self.smplx_layer_female(betas=shape, body_pose=body_pose, global_orient=root_pose, right_hand_pose=rhand_pose, left_hand_pose=lhand_pose, jaw_pose=jaw_pose, leye_pose=zero_pose, reye_pose=zero_pose, expression=expr)
-            output.vertices = output.vertices * is_male[:,None,None] + output_female.vertices * (1 - is_male[:,None,None])
-            output.joints = output.joints * is_male[:,None,None] + output_female.joints * (1 - is_male[:,None,None])
-        else:
-            output = self.smplx_layer_neutral(betas=shape, body_pose=body_pose, global_orient=root_pose, right_hand_pose=rhand_pose, left_hand_pose=lhand_pose, jaw_pose=jaw_pose, leye_pose=zero_pose, reye_pose=zero_pose, expression=expr)
+        output = self.smplx_layer(betas=shape, body_pose=body_pose, global_orient=root_pose, right_hand_pose=rhand_pose, left_hand_pose=lhand_pose, jaw_pose=jaw_pose, leye_pose=zero_pose, reye_pose=zero_pose, expression=expr)
         # camera-centered 3D coordinate
         mesh_cam = output.vertices
-        joint_cam = output.joints[:,smpl_x.joint_idx,:]
+        if mode == 'test' and cfg.test_set == 'AGORA': # use 144 joints for AGORA evaluation
+            joint_cam = output.joints
+        else:
+            joint_cam = output.joints[:,smpl_x.joint_idx,:]
 
         # project 3D coordinates to 2D space
-        if mode == 'train':
-            if len(cfg.trainset_3d) == 1 and cfg.trainset_3d[0] == 'AGORA' and len(cfg.trainset_2d) == 0: # prevent gradients from backpropagating to SMPLX paraemter regression module
-                x = (joint_cam[:,:,0].detach() + cam_trans[:,None,0]) / (joint_cam[:,:,2].detach() + cam_trans[:,None,2] + 1e-4) * cfg.focal[0] + cfg.princpt[0]
-                y = (joint_cam[:,:,1].detach() + cam_trans[:,None,1]) / (joint_cam[:,:,2].detach() + cam_trans[:,None,2] + 1e-4) * cfg.focal[1] + cfg.princpt[1]
-            else:
-                x = (joint_cam[:,:,0] + cam_trans[:,None,0]) / (joint_cam[:,:,2] + cam_trans[:,None,2] + 1e-4) * cfg.focal[0] + cfg.princpt[0]
-                y = (joint_cam[:,:,1] + cam_trans[:,None,1]) / (joint_cam[:,:,2] + cam_trans[:,None,2] + 1e-4) * cfg.focal[1] + cfg.princpt[1]
-        else: # use 144 joints for AGORA evaluation
-            x = (output.joints[:,:,0] + cam_trans[:,None,0]) / (output.joints[:,:,2] + cam_trans[:,None,2] + 1e-4) * cfg.focal[0] + cfg.princpt[0]
-            y = (output.joints[:,:,1] + cam_trans[:,None,1]) / (output.joints[:,:,2] + cam_trans[:,None,2] + 1e-4) * cfg.focal[1] + cfg.princpt[1]
+        if mode == 'train' and len(cfg.trainset_3d) == 1 and cfg.trainset_3d[0] == 'AGORA' and len(cfg.trainset_2d) == 0: # prevent gradients from backpropagating to SMPLX paraemter regression module
+            x = (joint_cam[:,:,0].detach() + cam_trans[:,None,0]) / (joint_cam[:,:,2].detach() + cam_trans[:,None,2] + 1e-4) * cfg.focal[0] + cfg.princpt[0]
+            y = (joint_cam[:,:,1].detach() + cam_trans[:,None,1]) / (joint_cam[:,:,2].detach() + cam_trans[:,None,2] + 1e-4) * cfg.focal[1] + cfg.princpt[1]
+        else:
+            x = (joint_cam[:,:,0] + cam_trans[:,None,0]) / (joint_cam[:,:,2] + cam_trans[:,None,2] + 1e-4) * cfg.focal[0] + cfg.princpt[0]
+            y = (joint_cam[:,:,1] + cam_trans[:,None,1]) / (joint_cam[:,:,2] + cam_trans[:,None,2] + 1e-4) * cfg.focal[1] + cfg.princpt[1]
         x = x / cfg.input_body_shape[1] * cfg.output_hm_shape[2]
         y = y / cfg.input_body_shape[0] * cfg.output_hm_shape[1]
         joint_proj = torch.stack((x,y),2)
@@ -139,7 +129,7 @@ class Model(nn.Module):
         rhand_feat = hand_feat[batch_size:,:]
 
         # body
-        root_pose, body_pose, shape, cam_param, gender = self.body_rotation_net(img_feat, body_joint_img.detach(), lhand_feat, lhand_joint_img[:,smpl_x.pos_joint_part['L_MCP'],:].detach(), rhand_feat, rhand_joint_img[:,smpl_x.pos_joint_part['R_MCP'],:].detach())
+        root_pose, body_pose, shape, cam_param = self.body_rotation_net(img_feat, body_joint_img.detach(), lhand_feat, lhand_joint_img[:,smpl_x.pos_joint_part['L_MCP'],:].detach(), rhand_feat, rhand_joint_img[:,smpl_x.pos_joint_part['R_MCP'],:].detach())
         root_pose = rot6d_to_axis_angle(root_pose)
         body_pose = rot6d_to_axis_angle(body_pose.reshape(-1,6)).reshape(body_pose.shape[0],-1) # (N, J_R*3)
         cam_trans = self.get_camera_trans(cam_param)
@@ -149,7 +139,7 @@ class Model(nn.Module):
         jaw_pose = rot6d_to_axis_angle(jaw_pose)
         
         # final output
-        joint_proj, joint_cam, mesh_cam = self.get_coord(root_pose, body_pose, lhand_pose, rhand_pose, jaw_pose, shape, expr, cam_trans, gender, mode)
+        joint_proj, joint_cam, mesh_cam = self.get_coord(root_pose, body_pose, lhand_pose, rhand_pose, jaw_pose, shape, expr, cam_trans, mode)
         pose = torch.cat((root_pose, body_pose, lhand_pose, rhand_pose, jaw_pose),1)
         joint_img = torch.cat((body_joint_img, lhand_joint_img, rhand_joint_img),1)
         
@@ -223,9 +213,6 @@ class Model(nn.Module):
             loss['joint_proj'] = self.coord_loss(joint_proj, targets['joint_img'][:,:,:2], meta_info['joint_trunc'])
             loss['joint_img'] = self.coord_loss(joint_img, smpl_x.reduce_joint_set(targets['joint_img']), smpl_x.reduce_joint_set(meta_info['joint_trunc']), meta_info['is_3D'])
             loss['smplx_joint_img'] = self.coord_loss(joint_img, smpl_x.reduce_joint_set(targets['smplx_joint_img']), smpl_x.reduce_joint_set(meta_info['smplx_joint_trunc']))
-            if len(cfg.trainset_3d) == 1 and cfg.trainset_3d[0] == 'AGORA' and len(cfg.trainset_2d) == 0:
-                loss['gender'] = self.ce_loss(gender, targets['gender'])
-            
             return loss
         else:
             # change hand output joint_img according to hand bbox
@@ -259,8 +246,6 @@ class Model(nn.Module):
             out['lhand_bbox'] = lhand_bbox
             out['rhand_bbox'] = rhand_bbox
             out['face_bbox'] = face_bbox
-            if cfg.testset == 'AGORA': 
-                out['is_male'] = F.softmax(gender, 1)[:,0] > F.softmax(gender, 1)[:,1]
             if 'smplx_mesh_cam' in targets:
                 out['smplx_mesh_cam_target'] = targets['smplx_mesh_cam']
             if 'smpl_mesh_cam' in targets:

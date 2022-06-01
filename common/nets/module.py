@@ -51,7 +51,6 @@ class RotationNet(nn.Module):
             self.body_pose_out = make_linear_layers([self.joint_num*515, (len(smpl_x.orig_joint_part['body'])-1)*6], relu_final=False) # without root
             self.shape_out = make_linear_layers([feat_dim,smpl_x.shape_param_dim], relu_final=False)
             self.cam_out = make_linear_layers([feat_dim,3], relu_final=False)
-            self.gender_out = make_linear_layers([feat_dim,2], relu_final=False)
         elif part == 'hand':
             self.hand_conv = make_conv_layers([feat_dim,512], kernel=1, stride=1, padding=0)
             self.hand_pose_out = make_linear_layers([self.joint_num*515, len(smpl_x.orig_joint_part['rhand'])*6], relu_final=False)
@@ -65,8 +64,6 @@ class RotationNet(nn.Module):
             
             # camera parameter
             cam_param = self.cam_out(img_feat.mean((2,3)))
-
-            gender = self.gender_out(img_feat.mean((2,3)))
 
             # body pose parameter
             # body feature
@@ -85,7 +82,7 @@ class RotationNet(nn.Module):
             feat = torch.cat((body_feat, lhand_feat, rhand_feat),1)
             root_pose = self.root_pose_out(feat.view(batch_size,-1))
             body_pose = self.body_pose_out(feat.view(batch_size,-1))
-            return root_pose, body_pose, shape_param, cam_param, gender
+            return root_pose, body_pose, shape_param, cam_param
 
         elif self.part == 'hand':
             # hand pose parameter

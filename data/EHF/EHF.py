@@ -145,9 +145,7 @@ class EHF(torch.utils.data.Dataset):
             eval_result['pa_mpvpe_hand'].append((np.sqrt(np.sum((mesh_out_lhand_align - mesh_gt_lhand)**2,1)).mean() * 1000 + np.sqrt(np.sum((mesh_out_rhand_align - mesh_gt_rhand)**2,1)).mean() * 1000)/2.)
 
             mesh_out_lhand_align = mesh_out_lhand - np.dot(smpl_x.J_regressor, mesh_out)[smpl_x.J_regressor_idx['lwrist'],None,:] + np.dot(smpl_x.J_regressor, mesh_gt)[smpl_x.J_regressor_idx['lwrist'],None,:]
-            #np.mean(mesh_out_lhand,0)[None,:] + np.mean(mesh_gt_lhand,0)[None,:]
             mesh_out_rhand_align = mesh_out_rhand - np.dot(smpl_x.J_regressor, mesh_out)[smpl_x.J_regressor_idx['rwrist'],None,:] + np.dot(smpl_x.J_regressor, mesh_gt)[smpl_x.J_regressor_idx['rwrist'],None,:]
-            #- np.mean(mesh_out_rhand,0)[None,:] + np.mean(mesh_gt_rhand,0)[None,:]
             eval_result['mpvpe_hand'].append((np.sqrt(np.sum((mesh_out_lhand_align - mesh_gt_lhand)**2,1)).mean() * 1000 + np.sqrt(np.sum((mesh_out_rhand_align - mesh_gt_rhand)**2,1)).mean() * 1000)/2.)
 
             # MPVPE from face vertices

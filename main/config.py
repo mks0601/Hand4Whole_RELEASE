@@ -5,7 +5,7 @@ import numpy as np
 
 class Config:
     
-    ## dataset
+    ## dataset (use names in the `data` folder)
     trainset_3d = ['Human36M']
     trainset_2d = ['MSCOCO', 'MPII'] 
     testset = 'EHF'
