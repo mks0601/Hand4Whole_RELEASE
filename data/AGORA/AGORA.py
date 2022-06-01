@@ -512,6 +512,9 @@ class AGORA(torch.utils.data.Dataset):
         return eval_result
 
     def print_eval_result(self, eval_result):
+        
+        print('AGORA test results are dumped at: ' + osp.join(cfg.result_dir, 'AGORA'))
+
         if self.data_split == 'test' and self.test_set == 'test': # do not print. just submit the results to the official evaluation server
             return
 
