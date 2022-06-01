@@ -157,8 +157,6 @@ to test Hand4Whole on the GPU 0,1,2,3 with60th epoch trained model. `--gpu 0,1,2
 ## Models
 * Download Hand4Whole trained on H36M+MPII+MSCOCO from [here](https://drive.google.com/file/d/1fHF_llZSxbjJNL_Gsz_NbiWAfb1fSsNZ/view?usp=sharing).
 * Download Hand4Whole fine-tuned on AGORA (without gender classification) from [here](https://drive.google.com/drive/folders/1Xy2ODCHwxkUORFD1P6dZU5aMWQ7G_QXs?usp=sharing).
-* Download Hand4Whole fine-tuned on AGORA (with gender classification) from [here](https://drive.google.com/file/d/1iEc0uPhhKTH-QVuf-qH-IpYWuNeb2jfP/view?usp=sharing).
-* Current codes do not support gender classification.
 
 ## Results
 
