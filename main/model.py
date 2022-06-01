@@ -49,7 +49,7 @@ class Model(nn.Module):
         output = self.smplx_layer(betas=shape, body_pose=body_pose, global_orient=root_pose, right_hand_pose=rhand_pose, left_hand_pose=lhand_pose, jaw_pose=jaw_pose, leye_pose=zero_pose, reye_pose=zero_pose, expression=expr)
         # camera-centered 3D coordinate
         mesh_cam = output.vertices
-        if mode == 'test' and cfg.test_set == 'AGORA': # use 144 joints for AGORA evaluation
+        if mode == 'test' and cfg.testset == 'AGORA': # use 144 joints for AGORA evaluation
             joint_cam = output.joints
         else:
             joint_cam = output.joints[:,smpl_x.joint_idx,:]
