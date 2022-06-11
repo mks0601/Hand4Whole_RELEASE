@@ -13,7 +13,7 @@ High-resolution video link: [here](https://youtu.be/Ym_CH8yxBso)
 
 
 ## Introduction  
-This repo is official **[PyTorch](https://pytorch.org)** implementation of **[**Accurate 3D Hand Pose Estimation for Whole-Body 3D Human Mesh Estimation** (CVPRW 2022)](https://arxiv.org/abs/2011.11534)**. **This repo contains whole-body codes**. For the body-only, hand-only, and face-only codes, visit [here](https://github.com/mks0601/Hand4Whole_RELEASE/tree/Pose2Pose).
+This repo is official **[PyTorch](https://pytorch.org)** implementation of **[**Accurate 3D Hand Pose Estimation for Whole-Body 3D Human Mesh Estimation** (CVPRW 2022 Oral.)](https://arxiv.org/abs/2011.11534)**. **This repo contains whole-body codes**. For the body-only, hand-only, and face-only codes, visit [here](https://github.com/mks0601/Hand4Whole_RELEASE/tree/Pose2Pose).
   
   
 ## Quick demo  
