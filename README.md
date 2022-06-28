@@ -139,6 +139,11 @@ Also, place the pre-trained Hand4Whole of the first stage to `tool/snapshot_6_al
 Then, go to `tool` folder and run `python merge_hand_to_all.py`.
 Place the generated `snapshot_0.pth.tar` to `output/model_dump`.
 
+
+Or, you can pre-train hand-only Pose2Pose by yourself.
+Switch to [Pose2Pose branch](https://github.com/mks0601/Hand4Whole_RELEASE/tree/Pose2Pose) and train hand-only Pose2Pose on MSCOCO, FreiHAND, InterHand2.6M.
+
+
 #### 3rd: combine pre-trained Hand4Whole and hand-only Pose2Pose and fine-tune it
 In the `main` folder, run  
 ```bash  
@@ -159,7 +164,7 @@ to test Hand4Whole on the GPU 0,1,2,3 with60th epoch trained model. `--gpu 0,1,2
 ## Models
 * Download Hand4Whole trained on H36M+MPII+MSCOCO from [here](https://drive.google.com/file/d/1fHF_llZSxbjJNL_Gsz_NbiWAfb1fSsNZ/view?usp=sharing).
 * Download Hand4Whole fine-tuned on AGORA (without gender classification) from [here](https://drive.google.com/drive/folders/1Xy2ODCHwxkUORFD1P6dZU5aMWQ7G_QXs?usp=sharing). 
-* To fine-tine Hand4Whole on AGORA, move `snapshot_6.pth.tar` to `tool` and run `python reset_epoch.py`. Then, move the generated `snapshot_0.pth.tar` to `output/model_dump` and run `python train.py --gpu 0-3 --lr 1e-4` after changing `trainset_3d=['AGORA']`, `trainset_2d[]`, `testset='AGORA`, `lr_dec_epoch=[40,60]`, and `end_epoch = 70` at `config.py`.
+* To fine-tine Hand4Whole on AGORA, move `snapshot_6.pth.tar`, generated after the 3rd training stage, to `tool` and run `python reset_epoch.py`. Then, move the generated `snapshot_0.pth.tar` to `output/model_dump` and run `python train.py --gpu 0-3 --lr 1e-4` after changing `trainset_3d=['AGORA']`, `trainset_2d[]`, `testset='AGORA`, `lr_dec_epoch=[40,60]`, and `end_epoch = 70` at `config.py`.
 
 ## Results
 
