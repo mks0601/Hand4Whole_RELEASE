@@ -111,7 +111,7 @@ ${ROOT}
 * Download InterHand2.6M dataset from [here](https://mks0601.github.io/InterHand2.6M/).
 * Download MPII parsed data and SMPL parameters [[data](https://drive.google.com/drive/folders/1MmQ2FRP0coxHGk0Ntj0JOGv9OxSNuCfK?usp=sharing)][[SMPL parameters from NeuralAnnot](https://drive.google.com/file/d/1dvtXmRWuTw1Rv89I8uGFl-YkZbhg3Lqz/view?usp=sharing)]
 * Download MPI-INF-3DHP parsed data and SMPL parameters [[data](https://drive.google.com/drive/folders/1oHzb4oJHPZllLgN_yjyatp1LdqdP0R61?usp=sharing)][[SMPL parameters from NeuralAnnot](https://drive.google.com/file/d/1mxyPTnwM7D5L0NhtSEY1-pl3k5mS2IV6/view?usp=sharing)]
-* Download MSCOCO SMPL parameters [[SMPL parameters from NeuralAnnot](https://drive.google.com/file/d/14XDSCdvpW_fJe_plbQ9wPwLv2VjdNuYZ/view?usp=sharing)]
+* Download MSCOCO SMPL/MANO/FLAME parameters [[SMPL parameters from NeuralAnnot](https://drive.google.com/file/d/14XDSCdvpW_fJe_plbQ9wPwLv2VjdNuYZ/view?usp=sharing)] [[MANO parameters from NeuralAnnot](https://drive.google.com/file/d/183lpJD88LNxZH9iDJackWCQrg9LBrQ0p/view?usp=sharing)] [[FLAME parameters from NeuralAnnot](https://drive.google.com/file/d/1VIsrPk9Ub547AN3dZH-XyfZbfNl0OYtX/view?usp=sharing)]
 * Download 3DPW parsed data [[data](https://drive.google.com/drive/folders/1fWrx0jnWzcudU6FN6QCZWefaOFSAadgR?usp=sharing)]
 * All annotation files follow [MSCOCO format](http://cocodataset.org/#format-data). If you want to add your own dataset, you have to convert it to [MSCOCO format](http://cocodataset.org/#format-data).  
   
