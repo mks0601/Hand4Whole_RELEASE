@@ -7,7 +7,7 @@
 
 ## Make annotation files
 * This code will dump GT 2D/3D joints and 3D vertices of SMPL and SMPL-X in $PATH1. Also, it will generate `AGORA_train.json` and `AGORA_validation.json` in $PATH1.
-* Download and unzip `train_SMPL.zip`, `train_SMPLX.zip`, `validation_SMPL.zip`, and `validation_SMPLX.zip`.
+* Download and unzip `train_SMPL.zip`, `train_SMPLX.zip`, `validation_SMPL.zip`, and `validation_SMPLX.zip` from [here](https://agora.is.tue.mpg.de/download.php).
 * Run `python agora2coco.py --dataset_path $PATH1 --human_model_path $PATH2`. $PATH1 denotes AGORA dataset path. $PATH2 denotes human model layer path. 
 
 ## Preparing 1280x720 image files
