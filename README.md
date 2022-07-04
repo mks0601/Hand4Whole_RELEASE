@@ -20,7 +20,7 @@ This repo is official **[PyTorch](https://pytorch.org)** implementation of **[**
 * Slightly change `torchgeometry` kernel code following [here](https://github.com/mks0601/I2L-MeshNet_RELEASE/issues/6#issuecomment-675152527).
 * Download the pre-trained Pose2Pose from any of [here (body)](https://drive.google.com/file/d/1uUbit0jvSKc9o2DW6GZ9VmFfskNxPfyE/view?usp=sharing), [here (hand)](https://drive.google.com/file/d/15wYR8psO2U3ZhFYQEH1-DWc81XkWvK2Y/view?usp=sharing), and [here (face)](https://drive.google.com/file/d/1xUBye3YQHPZe5mDQfx1NWefsdWWKr_Ov/view?usp=sharing).
 * Prepare `input.png` and pre-trained snapshot at any of `demo/body`, `demo/hand`, and `demo/face` folders.
-* Download [human_model_files](https://drive.google.com/drive/folders/1jV5n1B_1dXkwpGz66SkH7GIXFDidkCPo?usp=sharing) and it at `common/utils/human_model_files`.
+* Prepare `human_model_files` folder following below `Directory` part and place it at `common/utils/human_model_files`.
 * Go to any of `demo/body`, `demo/hand`, and `demo/face` folders and edit `bbox`.
 * Run `python demo.py --gpu 0`.
 * If you run this code in ssh environment without display device, do follow:
@@ -37,15 +37,31 @@ The `${ROOT}` is described as below.
 ${ROOT}  
 |-- data  
 |-- demo
-|-- common  
 |-- main  
 |-- output  
+|-- common
+|   |-- human_model_files
+|   |   |-- smpl
+|   |   |   |-- SMPL_NEUTRAL.pkl
+|   |   |-- smplx
+|   |   |   |-- MANO_SMPLX_vertex_ids.pkl
+|   |   |   |-- SMPL-X__FLAME_vertex_ids.npy
+|   |   |   |-- SMPLX_NEUTRAL.pkl
+|   |   |   |-- SMPLX_to_J14.pkl
+|   |   |-- mano
+|   |   |   |-- MANO_LEFT.pkl
+|   |   |   |-- MANO_RIGHT.pkl
+|   |   |-- flame
+|   |   |   |-- flame_dynamic_embedding.npy
+|   |   |   |-- flame_static_embedding.pkl
+|   |   |   |-- FLAME_NEUTRAL.pkl
 ```  
 * `data` contains data loading codes and soft links to images and annotations directories.  
 * `demo` contains demo codes.
 * `common` contains kernel codes for Pose2Pose.  
 * `main` contains high-level codes for training or testing the network.  
 * `output` contains log, trained models, visualized outputs, and test result.  
+* `human_model_files` contains `smpl`, `smplx`, `mano`, and `flame` 3D model files. Download the files from [[smpl]](http://smplify.is.tue.mpg.de/) [[smplx]](https://smpl-x.is.tue.mpg.de/) [[mano]](https://mano.is.tue.mpg.de/) [[flame]](https://flame.is.tue.mpg.de/).
   
 ### Data  
 You need to follow directory structure of the `data` as below.  
