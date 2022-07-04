@@ -61,7 +61,7 @@ ${ROOT}
 * `common` contains kernel codes for Pose2Pose.  
 * `main` contains high-level codes for training or testing the network.  
 * `output` contains log, trained models, visualized outputs, and test result.  
-* `human_model_files` contains `smpl`, `smplx`, `mano`, and `flame` 3D model files. Download the files from [[smpl]](http://smplify.is.tue.mpg.de/) [[smplx]](https://smpl-x.is.tue.mpg.de/) [[mano]](https://mano.is.tue.mpg.de/) [[flame]](https://flame.is.tue.mpg.de/).
+* `human_model_files` contains `smpl`, `smplx`, `mano`, and `flame` 3D model files. Download the files from [[smpl]](https://smpl.is.tue.mpg.de/) [[smplx]](https://smpl-x.is.tue.mpg.de/) [[mano]](https://mano.is.tue.mpg.de/) [[flame]](https://flame.is.tue.mpg.de/).
   
 ### Data  
 You need to follow directory structure of the `data` as below.  
