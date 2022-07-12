@@ -128,7 +128,7 @@ def render_mesh(img, mesh, face, cam_param,deg):
     # mesh
     cur_mesh =mesh
     mesh = trimesh.Trimesh(mesh, face)
-    ##TODO --- seg deg
+    ##TODO --- set deg
     if(deg!=0):
       rot = trimesh.transformations.rotation_matrix(np.radians(deg),[1,0,0],point=np.mean(cur_mesh.copy(),axis=0))#TODO --[1,0,0] -- for different axis to rotation.
       mesh.apply_transform(rot)
