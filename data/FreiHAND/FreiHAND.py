@@ -94,8 +94,8 @@ class FreiHAND(torch.utils.data.Dataset):
             """
             # for debug
             _tmp = mano_joint_img.copy()
-            _tmp[:,0] = _tmp[:,0] / cfg.output_hm_shape[1] * cfg.input_img_shape[1]
-            _tmp[:,1] = _tmp[:,1] / cfg.output_hm_shape[0] * cfg.input_img_shape[0]
+            _tmp[:,0] = _tmp[:,0] / cfg.output_hm_shape[2] * cfg.input_img_shape[1]
+            _tmp[:,1] = _tmp[:,1] / cfg.output_hm_shape[1] * cfg.input_img_shape[0]
             _img = img.numpy().transpose(1,2,0)[:,:,::-1] * 255
             _img = vis_keypoints(_img, _tmp)
             cv2.imwrite('frei' + str(idx) + '.jpg', _img)
