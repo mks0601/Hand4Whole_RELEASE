@@ -187,7 +187,7 @@ class MSCOCO(torch.utils.data.Dataset):
 
                 elif cfg.parts == 'hand':
                     for hand_type in ('right','left'):
-                        bbox = ann[hand_type + 'box']
+                        bbox = ann[hand_type + 'hand_box']
                         bbox = process_bbox(bbox, img['width'], img['height'])
                         if bbox is None:
                             continue
