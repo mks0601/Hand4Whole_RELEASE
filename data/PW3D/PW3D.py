@@ -22,9 +22,7 @@ class PW3D(torch.utils.data.Dataset):
         self.joint_set_h36m = { \
                             'joint_num': 17,
                             'joints_name': ('Pelvis', 'R_Hip', 'R_Knee', 'R_Ankle', 'L_Hip', 'L_Knee', 'L_Ankle', 'Torso', 'Neck', 'Head', 'Head_top', 'L_Shoulder', 'L_Elbow', 'L_Wrist', 'R_Shoulder', 'R_Elbow', 'R_Wrist'),
-                            'eval_joint': (1, 2, 3, 4, 5, 6, 8, 10, 11, 12, 13, 14, 15, 16),
-                            'smpl_regressor': np.load(osp.join('..', 'data', 'Human36M', 'J_regressor_h36m_smpl.npy')),
-                            'smplx_regressor': np.load(osp.join('..', 'data', 'Human36M', 'J_regressor_h36m_smplx.npy'))
+                            'eval_joint': (1, 2, 3, 4, 5, 6, 8, 10, 11, 12, 13, 14, 15, 16)
                             
                         }
         self.joint_set_h36m['root_joint_idx'] = self.joint_set_h36m['joints_name'].index('Pelvis')
