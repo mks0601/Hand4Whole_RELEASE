@@ -76,27 +76,10 @@ class PW3D(torch.utils.data.Dataset):
     def evaluate(self, outs, cur_sample_idx):
         annots = self.datalist
         sample_num = len(outs)
-        eval_result = {'mpjpe': [], 'pa_mpjpe': []}
+        eval_result = {}
         for n in range(sample_num):
             annot = annots[cur_sample_idx + n]
             out = outs[n]
-            
-            # h36m joint from gt mesh
-            mesh_gt_cam = out['smpl_mesh_cam_target']
-            joint_gt_h36m = np.dot(self.joint_set_h36m['smpl_regressor'], mesh_gt_cam)
-            joint_gt_h36m = joint_gt_h36m - joint_gt_h36m[self.joint_set_h36m['root_joint_idx'],None] # root-relative
-            joint_gt_h36m = joint_gt_h36m[self.joint_set_h36m['eval_joint'],:]
-            mesh_gt_cam -= np.dot(self.joint_set_h36m['smpl_regressor'], mesh_gt_cam)[self.joint_set_h36m['root_joint_idx'],None,:]
-            
-            # h36m joint from output mesh
-            mesh_out_cam = out['smplx_mesh_cam']
-            joint_out_h36m = np.dot(self.joint_set_h36m['smplx_regressor'], mesh_out_cam)
-            joint_out_h36m = joint_out_h36m - joint_out_h36m[self.joint_set_h36m['root_joint_idx'],None] # root-relative
-            joint_out_h36m = joint_out_h36m[self.joint_set_h36m['eval_joint'],:]
-            joint_out_h36m_aligned = rigid_align(joint_out_h36m, joint_gt_h36m)
-            eval_result['mpjpe'].append(np.sqrt(np.sum((joint_out_h36m - joint_gt_h36m)**2,1)).mean() * 1000) # meter -> milimeter
-            eval_result['pa_mpjpe'].append(np.sqrt(np.sum((joint_out_h36m_aligned - joint_gt_h36m)**2,1)).mean() * 1000) # meter -> milimeter
-            mesh_out_cam -= np.dot(self.joint_set_h36m['smplx_regressor'], mesh_out_cam)[self.joint_set_h36m['root_joint_idx'],None,:]
 
             vis = True
             if vis:
@@ -104,8 +87,7 @@ class PW3D(torch.utils.data.Dataset):
                 file_name = str(cur_sample_idx+n)
                 img = (out['img'].transpose(1,2,0)[:,:,::-1] * 255).copy()
                 cv2.imwrite(file_name + '.jpg', img)
-                #save_obj(mesh_gt_cam, smpl.face, file_name + '_gt.obj')
-                save_obj(mesh_out_cam, smpl_x.face, file_name + '.obj')
+                save_obj(out['smplx_mesh_cam'], smpl_x.face, file_name + '.obj')
                 """
                 
                 """
@@ -141,8 +123,7 @@ class PW3D(torch.utils.data.Dataset):
         return eval_result
 
     def print_eval_result(self, eval_result):
-        print('MPJPE: %.2f mm' % np.mean(eval_result['mpjpe']))
-        print('PA MPJPE: %.2f mm' % np.mean(eval_result['pa_mpjpe']))
+        pass
 
 
 
