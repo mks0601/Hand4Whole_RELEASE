@@ -157,7 +157,7 @@ In the `main` folder, run
 ```bash  
 python train.py --gpu 0-3 --parts body
 ```  
-to train body-only Pose2Pose on the GPU 0,1,2,3. `--gpu 0,1,2,3` can be used instead of `--gpu 0-3`. You can chnage `body` to `hand` or `face` for the hand-only and face-only Pose2Pose, respectively. To train body-only Pose2Pose from the pre-trained 2D human pose estimation network, download [this](https://drive.google.com/file/d/1E_gEoY7pS5BTNcpxeM1IftkkboPKebs-/view?usp=sharing) and place it at `output/model_dump`. Then, run
+to train body-only Pose2Pose on the GPU 0,1,2,3. `--gpu 0,1,2,3` can be used instead of `--gpu 0-3`. You can chnage `body` to `hand` or `face` for the hand-only and face-only Pose2Pose, respectively. To train body-only Pose2Pose from the pre-trained 2D human pose estimation network, download [this](https://drive.google.com/file/d/1E_gEoY7pS5BTNcpxeM1IftkkboPKebs-/view?usp=sharing) and place it at `tool` folder. Then run `python convert_simple_to_pose2pose.py`. Finally, move the generated `snapshot_0.pth.tar` to `output/model_dump`. Then, run
 ```bash  
 python train.py --gpu 0-3 --parts body --continue
 ```  
