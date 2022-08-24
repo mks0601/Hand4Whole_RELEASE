@@ -63,7 +63,7 @@ ${ROOT}
 * `tool` contains pre-processing codes of AGORA and pytorch model editing codes.
 * `output` contains log, trained models, visualized outputs, and test result.  
 * `common` contains kernel codes for Hand4Whole.  
-* `human_model_files` contains `smpl`, `smplx`, `mano`, and `flame` 3D model files. Download the files from [[smpl]](https://smpl.is.tue.mpg.de/) [[smplx]](https://smpl-x.is.tue.mpg.de/) [[mano]](https://mano.is.tue.mpg.de/) [[flame]](https://flame.is.tue.mpg.de/).
+* `human_model_files` contains `smpl`, `smplx`, `mano`, and `flame` 3D model files. Download the files from [[smpl]](https://smpl.is.tue.mpg.de/) [[smplx]](https://smpl-x.is.tue.mpg.de/) [[SMPLX_to_J14.pkl]https://github.com/vchoutas/expose#preparing-the-data] [[mano]](https://mano.is.tue.mpg.de/) [[flame]](https://flame.is.tue.mpg.de/).
   
 ### Data  
 You need to follow directory structure of the `data` as below.  
