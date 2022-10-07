@@ -41,21 +41,22 @@ ${ROOT}
 |-- tool
 |-- output  
 |-- common
-|   |-- human_model_files
-|   |   |-- smpl
-|   |   |   |-- SMPL_NEUTRAL.pkl
-|   |   |-- smplx
-|   |   |   |-- MANO_SMPLX_vertex_ids.pkl
-|   |   |   |-- SMPL-X__FLAME_vertex_ids.npy
-|   |   |   |-- SMPLX_NEUTRAL.pkl
-|   |   |   |-- SMPLX_to_J14.pkl
-|   |   |-- mano
-|   |   |   |-- MANO_LEFT.pkl
-|   |   |   |-- MANO_RIGHT.pkl
-|   |   |-- flame
-|   |   |   |-- flame_dynamic_embedding.npy
-|   |   |   |-- flame_static_embedding.pkl
-|   |   |   |-- FLAME_NEUTRAL.pkl
+|   |-- utils
+|   |   |-- human_model_files
+|   |   |   |-- smpl
+|   |   |   |   |-- SMPL_NEUTRAL.pkl
+|   |   |   |-- smplx
+|   |   |   |   |-- MANO_SMPLX_vertex_ids.pkl
+|   |   |   |   |-- SMPL-X__FLAME_vertex_ids.npy
+|   |   |   |   |-- SMPLX_NEUTRAL.pkl
+|   |   |   |   |-- SMPLX_to_J14.pkl
+|   |   |   |-- mano
+|   |   |   |   |-- MANO_LEFT.pkl
+|   |   |   |   |-- MANO_RIGHT.pkl
+|   |   |   |-- flame
+|   |   |   |   |-- flame_dynamic_embedding.npy
+|   |   |   |   |-- flame_static_embedding.pkl
+|   |   |   |   |-- FLAME_NEUTRAL.pkl
 ```  
 * `data` contains data loading codes and soft links to images and annotations directories.  
 * `demo` contains demo codes.
