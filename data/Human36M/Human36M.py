@@ -145,6 +145,7 @@ class Human36M(torch.utils.data.Dataset):
             joint_cam = (joint_cam - joint_cam[self.joint_set['root_joint_idx'],None,:]) / 1000 # root-relative. milimeter to meter.
             joint_img = data['joint_img']
             joint_img = np.concatenate((joint_img[:,:2], joint_cam[:,2:]),1) # x, y, depth
+            joint_img[:,2] = (joint_img[:,2] / (cfg.body_3d_size / 2) + 1)/2. * cfg.output_hm_shape[0] # discretize depth
             joint_img, joint_cam, joint_valid, joint_trunc = process_db_coord(joint_img, joint_cam, data['joint_valid'], do_flip, img_shape, self.joint_set['flip_pairs'], img2bb_trans, rot, self.joint_set['joints_name'], smpl_x.joints_name)
             
             # smplx coordinates and parameters
