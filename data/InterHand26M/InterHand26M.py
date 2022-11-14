@@ -119,7 +119,7 @@ class InterHand26M(torch.utils.data.Dataset):
                     'cam_param': cam_param,
                     'mano_param': mano_param,
                     'hand_type': hand_type})
-                    % 'orig_hand_type': ann['hand_type']}) % causes memory leak..
+                    # 'orig_hand_type': ann['hand_type']}) # causes memory leak..
 
         return datalist
     
