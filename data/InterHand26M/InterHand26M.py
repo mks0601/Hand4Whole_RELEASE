@@ -118,8 +118,8 @@ class InterHand26M(torch.utils.data.Dataset):
                     'joint_valid': joint_valid[self.joint_set['hand']['joint_type'][hand_type],:],
                     'cam_param': cam_param,
                     'mano_param': mano_param,
-                    'hand_type': hand_type,
-                    'orig_hand_type': ann['hand_type']})
+                    'hand_type': hand_type})
+                    % 'orig_hand_type': ann['hand_type']}) % causes memory leak..
 
         return datalist
     
