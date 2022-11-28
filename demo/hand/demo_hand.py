@@ -80,6 +80,7 @@ with torch.no_grad():
     out = model(inputs, targets, meta_info, 'test')
 rhand_mesh = out['mano_mesh_cam'].detach().cpu().numpy()[0]
 lhand_mesh = out['mano_mesh_cam'].detach().cpu().numpy()[1]
+lhand_img = torch.flip(lhand_img, [3]) # flip back to the left hand image
 lhand_mesh[:,0] *= -1 # flip back to the left hand mesh
 
 # save mesh
