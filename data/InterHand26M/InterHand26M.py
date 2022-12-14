@@ -10,7 +10,7 @@ from pycocotools.coco import COCO
 from config import cfg
 from utils.human_models import mano
 from utils.preprocessing import load_img, get_bbox, process_bbox, augmentation, process_db_coord, process_human_model_output
-from utils.transforms import world2cam, cam2pixel, rigid_align
+from utils.transforms import world2cam, cam2pixel, rigid_align, transform_joint_to_other_db
 from utils.vis import vis_keypoints, vis_mesh, save_obj
 
 class InterHand26M(torch.utils.data.Dataset):
@@ -185,13 +185,76 @@ class InterHand26M(torch.utils.data.Dataset):
             meta_info = {'joint_valid': joint_valid, 'joint_trunc': joint_trunc, 'mano_joint_trunc': mano_joint_trunc, 'mano_joint_valid': mano_joint_valid, 'mano_pose_valid': mano_pose_valid, 'mano_shape_valid': mano_shape_valid, 'is_3D': float(True)}
         else:
             inputs = {'img': img}
-            targets = {}
+            targets = {'mano_mesh_cam': mano_mesh_cam_orig}
             meta_info = {}
 
         return inputs, targets, meta_info
 
     def evaluate(self, outs, cur_sample_idx):
-        return {}
-    
+        annots = self.datalist
+        sample_num = len(outs)
+        eval_result = {\
+                        'mpjpe': [[None for _ in range(self.joint_set['hand']['joint_num'])] for _ in range(sample_num)], \
+                        'mpvpe': [None for _ in range(sample_num)] \
+                        }
+        for n in range(sample_num):
+            annot = annots[cur_sample_idx + n]
+            out = outs[n]
+   
+            # gt
+            mesh_gt = out['mano_mesh_cam_target']
+            mesh_valid = annot['mano_param'] is not None
+            joint_gt = annot['joint_cam'] / 1000 # milimeter to meter
+            joint_valid = annot['joint_valid']
+
+            # out
+            mesh_out = out['mano_mesh_cam']
+            joint_out = np.dot(mano.joint_regressor, mesh_out)
+            joint_out = transform_joint_to_other_db(joint_out, mano.joints_name, self.joint_set['hand']['joints_name'])
+
+            # translation alignment
+            mesh_gt = mesh_gt - joint_gt[self.joint_set['hand']['root_joint_idx'],None,:]
+            joint_gt = joint_gt - joint_gt[self.joint_set['hand']['root_joint_idx'],None,:]
+            mesh_out = mesh_out - joint_out[self.joint_set['hand']['root_joint_idx'],None,:]
+            joint_out = joint_out - joint_out[self.joint_set['hand']['root_joint_idx'],None,:]
+            
+            # error calculate
+            for j in range(self.joint_set['joint_num']):
+                if joint_valid[j]:
+                    eval_result['mpjpe'][n][j] = np.sqrt(np.sum((joint_gt[j] - joint_out[j])**2))
+            if mesh_valid:
+                eval_result['mpvpe'][n] = np.sqrt(np.sum((mesh_gt - mesh_out)**2,1))
+
+            vis = False
+            if vis:
+                file_name = str(cur_sample_idx+n)
+                img = (out['img'].transpose(1,2,0)[:,:,::-1] * 255).copy()
+                save_obj(mesh_gt, mano.face['right'], file_name + '_gt.obj')
+                save_obj(mesh_out, mano.face['right'], file_name + '.obj')
+
+        return eval_result
+
     def print_eval_result(self, eval_result):
-        return
+        tot_eval_result = {
+                'mpjpe': [[] for _ in range(self.joint_set['hand']['joint_num'])], 
+                'mpvpe': [],
+                }
+        
+        # mpjpe (average all samples)
+        for mpjpe in eval_result['mpjpe']:
+            for j in range(self.joint_set['joint_num']):
+                if mpjpe[j] is not None:
+                    tot_eval_result['mpjpe'][j].append(mpjpe[j])
+        tot_eval_result['mpjpe'] = [np.mean(result) for result in tot_eval_result['mpjpe']]
+        
+        # mpvpe (average all samples)
+        for mpvpe in eval_result['mpvpe']:
+            if mpvpe is not None:
+                tot_eval_result['mpvpe'].append(mpvpe)
+        
+        # print evaluation results
+        eval_result = tot_eval_result
+ 
+        print('MPJPE: %.2f mm' % (np.mean(eval_result['mpjpe']) * 1000))
+        print('MPVPE: %.2f mm' % (np.mean(eval_result['mpvpe']) * 1000))
+
