@@ -147,7 +147,7 @@ In the `main` folder, run
 ```bash  
 python train.py --gpu 0-3 --lr 1e-4 --continue
 ```  
-to train Hand4Whole on the GPU 0,1,2,3. `--gpu 0,1,2,3` can be used instead of `--gpu 0-3`. To train Hand4Whole from the pre-trained 2D human pose estimation network, download [this](https://drive.google.com/file/d/1E_gEoY7pS5BTNcpxeM1IftkkboPKebs-/view?usp=sharing) and place it at `output/model_dump`.
+to train Hand4Whole on the GPU 0,1,2,3. `--gpu 0,1,2,3` can be used instead of `--gpu 0-3`. To train Hand4Whole from the pre-trained 2D human pose estimation network, download [this](https://drive.google.com/file/d/1E_gEoY7pS5BTNcpxeM1IftkkboPKebs-/view?usp=sharing) and place it at `tool`. Then, run `python convert_simple_to_pose2pose.py`, which produces `snapshot_0.pth.tar`. Finally, place `snapshot_0.pth.tar` to `output/model_dump`.
 
 #### 2nd: pre-train hand-only Pose2Pose
 Download pre-trained hand-only Pose2Pose from [here](https://drive.google.com/file/d/15wYR8psO2U3ZhFYQEH1-DWc81XkWvK2Y/view?usp=sharing).
