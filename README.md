@@ -162,6 +162,10 @@ Switch to [Pose2Pose branch](https://github.com/mks0601/Hand4Whole_RELEASE/tree/
 
 
 #### 3rd: combine pre-trained Hand4Whole and hand-only Pose2Pose and fine-tune it
+Move `snapshot_6.pth.tar` of the 1st stage to `tool/snapshot_6_all.pth.tar`.
+Then, move `snapshot_12.pth.tar` of the 2nd stage to `tool/snapshot_12_hand.pth.tar`.
+Run `python merge_hand_to_all.py` at the `tool` folder.
+Move generated `snapshot_0.pth.tar` to `output/model_dump`. 
 In the `main` folder, run  
 ```bash  
 python train.py --gpu 0-3 --lr 1e-5 --continue
