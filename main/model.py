@@ -153,7 +153,7 @@ class Model(nn.Module):
             if cfg.parts == 'body':
                 loss['joint_img'] = self.coord_loss(joint_img, smpl.reduce_joint_set(targets['joint_img']), smpl.reduce_joint_set(meta_info['joint_trunc']), meta_info['is_3D'])
                 loss['smpl_joint_img'] = self.coord_loss(joint_img, smpl.reduce_joint_set(targets['smpl_joint_img']), smpl.reduce_joint_set(meta_info['smpl_joint_trunc']))
-                loss['smpl_pose'] = self.param_loss(smpl_pose, targets['smpl_pose'], meta_info['smpl_pose_valid'])
+                loss['smpl_pose'] = self.param_loss(smpl_pose, targets['smpl_pose'], meta_info['smpl_pose_valid']) # computing loss with rotation matrix instead of axis-angle can avoid ambiguity of axis-angle. current: compute loss with axis-angle. should be fixed.
                 loss['smpl_shape'] = self.param_loss(smpl_shape, targets['smpl_shape'], meta_info['smpl_shape_valid'][:,None])
                 loss['joint_proj'] = self.coord_loss(joint_proj, targets['joint_img'][:,:,:2], meta_info['joint_trunc'])
                 loss['joint_cam'] = self.coord_loss(joint_cam, targets['joint_cam'], meta_info['joint_valid'] * meta_info['is_3D'][:,None,None])
@@ -162,15 +162,15 @@ class Model(nn.Module):
             elif cfg.parts == 'hand':
                 loss['joint_img'] = self.coord_loss(joint_img, targets['joint_img'], meta_info['joint_trunc'], meta_info['is_3D'])
                 loss['mano_joint_img'] = self.coord_loss(joint_img, targets['mano_joint_img'], meta_info['mano_joint_trunc'])
-                loss['mano_pose'] = self.param_loss(mano_pose, targets['mano_pose'], meta_info['mano_pose_valid'])
+                loss['mano_pose'] = self.param_loss(mano_pose, targets['mano_pose'], meta_info['mano_pose_valid']) # computing loss with rotation matrix instead of axis-angle can avoid ambiguity of axis-angle. current: compute loss with axis-angle. should be fixed.
                 loss['mano_shape'] = self.param_loss(mano_shape, targets['mano_shape'], meta_info['mano_shape_valid'][:,None])
                 loss['joint_proj'] = self.coord_loss(joint_proj, targets['joint_img'][:,:,:2], meta_info['joint_trunc'])
                 loss['joint_cam'] = self.coord_loss(joint_cam, targets['joint_cam'], meta_info['joint_valid'] * meta_info['is_3D'][:,None,None])
                 loss['mano_joint_cam'] = self.coord_loss(joint_cam, targets['mano_joint_cam'], meta_info['mano_joint_valid'])
 
             elif cfg.parts == 'face':
-                loss['flame_root_pose'] = self.param_loss(flame_root_pose, targets['flame_root_pose'], meta_info['flame_root_pose_valid'][:,None])
-                loss['flame_jaw_pose'] = self.param_loss(flame_jaw_pose, targets['flame_jaw_pose'], meta_info['flame_jaw_pose_valid'][:,None])
+                loss['flame_root_pose'] = self.param_loss(flame_root_pose, targets['flame_root_pose'], meta_info['flame_root_pose_valid'][:,None]) # computing loss with rotation matrix instead of axis-angle can avoid ambiguity of axis-angle. current: compute loss with axis-angle. should be fixed.
+                loss['flame_jaw_pose'] = self.param_loss(flame_jaw_pose, targets['flame_jaw_pose'], meta_info['flame_jaw_pose_valid'][:,None]) # computing loss with rotation matrix instead of axis-angle can avoid ambiguity of axis-angle. current: compute loss with axis-angle. should be fixed.
                 loss['flame_shape'] = self.param_loss(flame_shape, targets['flame_shape'], meta_info['flame_shape_valid'][:,None])
                 loss['flame_expr'] = self.param_loss(flame_expr, targets['flame_expr'], meta_info['flame_expr_valid'][:,None])
                 loss['joint_proj'] = self.coord_loss(joint_proj, targets['joint_img'][:,:,:2], meta_info['joint_trunc'])
