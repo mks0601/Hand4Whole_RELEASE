@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch.nn import functional as F
 from nets.resnet import ResNetBackbone
 from nets.module import PositionNet, RotationNet, FaceRegressor, BoxNet, HandRoI, FaceRoI
-from nets.loss import CoordLoss, ParamLoss, CELoss
+from nets.loss import CoordLoss, ParamLoss
 from utils.human_models import smpl_x
 from utils.transforms import rot6d_to_axis_angle, restore_bbox
 from config import cfg
@@ -30,7 +30,6 @@ class Model(nn.Module):
 
         self.coord_loss = CoordLoss()
         self.param_loss = ParamLoss()
-        self.ce_loss = CELoss()
 
         self.trainable_modules = [self.backbone, self.body_position_net, self.body_rotation_net, self.box_net, self.hand_roi_net, self.hand_position_net, self.hand_rotation_net, self.face_roi_net, self.face_regressor]
 
@@ -117,6 +116,11 @@ class Model(nn.Module):
         batch_size = hand_joint_img.shape[0]//2
         lhand_joint_img = hand_joint_img[:batch_size,:,:]
         lhand_joint_img = torch.cat((cfg.output_hand_hm_shape[2] - 1 - lhand_joint_img[:,:,0:1], lhand_joint_img[:,:,1:]),2)
+        # the above line causes pixel-misalignment of hands. should be like below four lines
+        # lhand_joint_img_x = lhand_joint_img[:,:,0] / cfg.output_hand_hm_shape[2] * cfg.input_hand_shape[1]
+        # lhand_joint_img_x = cfg.input_hand_shape[1] - 1 - lhand_joint_img_x
+        # lhand_joint_img_x = lhand_joint_img_x / cfg.input_hand_shape[1] * cfg.output_hand_hm_shape[2]
+        # lhand_joint_img = torch.cat((lhand_joint_img_x[:,:,None], lhand_joint_img[:,:,1:]),2)
         rhand_joint_img = hand_joint_img[batch_size:,:,:]
         # restore flipped left hand joint rotations
         batch_size = hand_pose.shape[0]//2
@@ -146,7 +150,7 @@ class Model(nn.Module):
         if mode == 'train':
             # loss functions
             loss = {}
-            loss['smplx_pose'] = self.param_loss(pose, targets['smplx_pose'], meta_info['smplx_pose_valid'])
+            loss['smplx_pose'] = self.param_loss(pose, targets['smplx_pose'], meta_info['smplx_pose_valid']) # computing loss with rotation matrix instead of axis-angle can avoid ambiguity of axis-angle. current: compute loss with axis-angle. should be fixed.
             loss['smplx_shape'] = self.param_loss(shape, targets['smplx_shape'], meta_info['smplx_shape_valid'][:,None])
             loss['smplx_expr'] = self.param_loss(expr, targets['smplx_expr'], meta_info['smplx_expr_valid'][:,None])
             loss['joint_cam'] = self.coord_loss(joint_cam, targets['joint_cam'], meta_info['joint_valid'] * meta_info['is_3D'][:,None,None])
