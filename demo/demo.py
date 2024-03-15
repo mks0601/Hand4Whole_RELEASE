@@ -18,6 +18,30 @@ from utils.preprocessing import load_img, process_bbox, generate_patch_image
 from utils.human_models import smpl_x
 from utils.vis import render_mesh, save_obj
 import json
+from torchvision import transforms as T
+from torchvision.models.detection import fasterrcnn_resnet50_fpn
+
+def get_one_box(det_output, thrd=0.9):
+    max_area = 0
+    max_bbox = None
+
+    if det_output['boxes'].shape[0] == 0 or thrd < 1e-5:
+        return None
+
+    for i in range(det_output['boxes'].shape[0]):
+        bbox = det_output['boxes'][i]
+        score = det_output['scores'][i]
+        if float(score) < thrd:
+            continue
+        area = (bbox[2] - bbox[0]) * (bbox[3] - bbox[1])
+        if float(area) > max_area:
+            max_bbox = [float(x) for x in bbox]
+            max_area = area
+
+    if max_bbox is None:
+        return get_one_box(det_output, thrd=thrd - 0.1)
+
+    return max_bbox
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -53,16 +77,21 @@ model.eval()
 # prepare input image
 transform = transforms.ToTensor()
 img_path = './input.png'
-original_img = load_img(img_path)
+original_img = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2RGB)
 original_img_height, original_img_width = original_img.shape[:2]
 
 # prepare bbox
-bbox = [193, 120, 516-193, 395-120] # xmin, ymin, width, height
+det_model = fasterrcnn_resnet50_fpn(pretrained=True).cuda().eval()
+det_transform = T.Compose([T.ToTensor()])
+det_input = det_transform(original_img).cuda()
+det_output = det_model([det_input])[0]
+bbox = get_one_box(det_output) # xyxy
+bbox = [bbox[0], bbox[1], bbox[2]-bbox[0], bbox[3]-bbox[1]] # xywh
 bbox = process_bbox(bbox, original_img_width, original_img_height)
 img, img2bb_trans, bb2img_trans = generate_patch_image(original_img, bbox, 1.0, 0.0, False, cfg.input_img_shape) 
 img = transform(img.astype(np.float32))/255
 img = img.cuda()[None,:,:,:]
-    
+
 # forward
 inputs = {'img': img}
 targets = {}
