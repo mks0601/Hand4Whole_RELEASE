@@ -21,25 +21,16 @@ import json
 from torchvision import transforms as T
 from torchvision.models.detection import fasterrcnn_resnet50_fpn
 
-def get_one_box(det_output, thrd=0.9):
-    max_area = 0
+def get_one_box(det_output):
+    max_score = 0
     max_bbox = None
-
-    if det_output['boxes'].shape[0] == 0 or thrd < 1e-5:
-        return None
 
     for i in range(det_output['boxes'].shape[0]):
         bbox = det_output['boxes'][i]
         score = det_output['scores'][i]
-        if float(score) < thrd:
-            continue
-        area = (bbox[2] - bbox[0]) * (bbox[3] - bbox[1])
-        if float(area) > max_area:
+        if float(score) > max_score:
             max_bbox = [float(x) for x in bbox]
-            max_area = area
-
-    if max_bbox is None:
-        return get_one_box(det_output, thrd=thrd - 0.1)
+            max_score = score
 
     return max_bbox
 
