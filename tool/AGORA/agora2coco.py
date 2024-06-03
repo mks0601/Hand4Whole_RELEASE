@@ -48,19 +48,12 @@ def save_obj(v, f, file_name='output.obj'):
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset_path', type=str, dest='dataset_path')
-    parser.add_argument('--human_model_path', type=str, dest='human_model_path')
     args = parser.parse_args()
-
-    if not args.dataset_path:
-        assert 0, "Please set dataset_path"
-    if not args.human_model_path:
-        assert 0, "Please set human_model_path"
-
+    assert args.dataset_path, "Please set dataset_path"
     return args
 
 args = parse_args()
 dataset_path = args.dataset_path
-smplx_layer = smplx.create(args.human_model_path, 'smplx', use_pca=False)
 
 image_id = 0
 ann_id = 0
