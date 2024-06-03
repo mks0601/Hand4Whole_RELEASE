@@ -59,7 +59,7 @@ def parse_args():
     return args
 
 args = parse_args()
-root_path = args.root_path
+dataset_path = args.dataset_path
 smplx_layer = smplx.create(args.human_model_path, 'smplx', use_pca=False)
 
 image_id = 0
@@ -86,17 +86,17 @@ smplx_joint_part = {
             'face': list(range(smplx_joints_name.index('Face_5'), smplx_joints_name.index('Face_55')+1))}
 smpl_joints_name = ('Pelvis', 'L_Hip', 'R_Hip', 'Spine_1', 'L_Knee', 'R_Knee', 'Spine_2', 'L_Ankle', 'R_Ankle', 'Spine_3', 'L_Foot', 'R_Foot', 'Neck', 'L_Collar', 'R_Collar', 'Head', 'L_Shoulder', 'R_Shoulder', 'L_Elbow', 'R_E     lbow', 'L_Wrist', 'R_Wrist', 'L_Hand', 'R_Hand', 'Nose', 'R_Eye', 'L_Eye', 'R_Ear', 'L_Ear', 'L_Big_toe', 'L_Small_toe', 'L_Heel', 'R_Big_toe', 'R_Small_toe', 'R_Heel', 'L_Thumb_4', 'L_Index_4', 'L_Middle_4', 'L_Ring_4', 'L_Pinky_4', 'R_Thumb_4', 'R_Index_4', 'R_Middle_4', 'R_Ring_4', 'R_Pinky_4')
 
-pathlib.Path(osp.join(root_path, gt_joints_2d_path, 'smplx')).mkdir(parents=True, exist_ok=True)
-pathlib.Path(osp.join(root_path, gt_joints_3d_path, 'smplx')).mkdir(parents=True, exist_ok=True)
-pathlib.Path(osp.join(root_path, gt_verts_path, 'smplx')).mkdir(parents=True, exist_ok=True)
-pathlib.Path(osp.join(root_path, gt_joints_2d_path, 'smpl')).mkdir(parents=True, exist_ok=True)
-pathlib.Path(osp.join(root_path, gt_joints_3d_path, 'smpl')).mkdir(parents=True, exist_ok=True)
-pathlib.Path(osp.join(root_path, gt_verts_path, 'smpl')).mkdir(parents=True, exist_ok=True)
+pathlib.Path(osp.join(dataset_path, gt_joints_2d_path, 'smplx')).mkdir(parents=True, exist_ok=True)
+pathlib.Path(osp.join(dataset_path, gt_joints_3d_path, 'smplx')).mkdir(parents=True, exist_ok=True)
+pathlib.Path(osp.join(dataset_path, gt_verts_path, 'smplx')).mkdir(parents=True, exist_ok=True)
+pathlib.Path(osp.join(dataset_path, gt_joints_2d_path, 'smpl')).mkdir(parents=True, exist_ok=True)
+pathlib.Path(osp.join(dataset_path, gt_joints_3d_path, 'smpl')).mkdir(parents=True, exist_ok=True)
+pathlib.Path(osp.join(dataset_path, gt_verts_path, 'smpl')).mkdir(parents=True, exist_ok=True)
 
 for split in ('train', 'validation'):
     images = []
     annotations = []
-    data_path_list = glob(osp.join(root_path, split + '_SMPLX', 'SMPLX', '*.pkl')) + glob(osp.join(root_path, split + '_SMPL', 'SMPL', '*.pkl'))
+    data_path_list = glob(osp.join(dataset_path, split + '_SMPLX', 'SMPLX', '*.pkl')) + glob(osp.join(dataset_path, split + '_SMPL', 'SMPL', '*.pkl'))
     data_path_list = sorted(data_path_list)
 
     for data_path in tqdm(data_path_list):
@@ -104,7 +104,7 @@ for split in ('train', 'validation'):
             data_smplx = pickle.load(f, encoding='latin1')
             data_smplx = {k: list(v) for k,v in data_smplx.items()}
 
-        with open(osp.join(root_path, split + '_SMPL', 'SMPL', data_path.split('/')[-1]), 'rb') as f:
+        with open(osp.join(dataset_path, split + '_SMPL', 'SMPL', data_path.split('/')[-1]), 'rb') as f:
             data_smpl = pickle.load(f, encoding='latin1')
             data_smpl = {k: list(v) for k,v in data_smpl.items()}
        
@@ -161,30 +161,30 @@ for split in ('train', 'validation'):
 
                 # save smplx gts
                 joints_2d = np.array(data_smplx['gt_joints_2d'][i][j]).reshape(-1,2)
-                with open(osp.join(root_path, gt_joints_2d_path, 'smplx', str(ann_id) + '.json'), 'w') as f:
+                with open(osp.join(dataset_path, gt_joints_2d_path, 'smplx', str(ann_id) + '.json'), 'w') as f:
                     json.dump(joints_2d.tolist(), f)
                 joints_3d = np.array(data_smplx['gt_joints_3d'][i][j]).reshape(-1,3)
-                with open(osp.join(root_path, gt_joints_3d_path, 'smplx', str(ann_id) + '.json'), 'w') as f:
+                with open(osp.join(dataset_path, gt_joints_3d_path, 'smplx', str(ann_id) + '.json'), 'w') as f:
                     json.dump(joints_3d.tolist(), f)
                 verts = np.array(data_smplx['gt_verts'][i][j]).reshape(-1,3)
-                with open(osp.join(root_path, gt_verts_path, 'smplx', str(ann_id) + '.json'), 'w') as f:
+                with open(osp.join(dataset_path, gt_verts_path, 'smplx', str(ann_id) + '.json'), 'w') as f:
                     json.dump(verts.tolist(), f)
                 
                 # save smpl gts
                 joints_2d = np.array(data_smpl['gt_joints_2d'][i][j]).reshape(-1,2)
-                with open(osp.join(root_path, gt_joints_2d_path, 'smpl', str(ann_id) + '.json'), 'w') as f:
+                with open(osp.join(dataset_path, gt_joints_2d_path, 'smpl', str(ann_id) + '.json'), 'w') as f:
                     json.dump(joints_2d.tolist(), f)
                 joints_3d = np.array(data_smpl['gt_joints_3d'][i][j]).reshape(-1,3)
-                with open(osp.join(root_path, gt_joints_3d_path, 'smpl', str(ann_id) + '.json'), 'w') as f:
+                with open(osp.join(dataset_path, gt_joints_3d_path, 'smpl', str(ann_id) + '.json'), 'w') as f:
                     json.dump(joints_3d.tolist(), f)
                 verts = np.array(data_smpl['gt_verts'][i][j]).reshape(-1,3)
-                with open(osp.join(root_path, gt_verts_path, 'smpl', str(ann_id) + '.json'), 'w') as f:
+                with open(osp.join(dataset_path, gt_verts_path, 'smpl', str(ann_id) + '.json'), 'w') as f:
                     json.dump(verts.tolist(), f)
 
                 ann_id += 1
             image_id += 1
 
-    with open(osp.join(root_path, 'AGORA_' + split + '.json'), 'w') as f:
+    with open(osp.join(dataset_path, 'AGORA_' + split + '.json'), 'w') as f:
         json.dump({'images': images, 'annotations': annotations}, f)
         
 
