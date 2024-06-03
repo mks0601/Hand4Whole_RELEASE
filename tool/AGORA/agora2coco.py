@@ -68,7 +68,7 @@ os.makedirs(osp.join(dataset_path, gt_verts_path, 'smpl'), exist_ok=True)
 for split in ('train', 'validation'):
     images = []
     annotations = []
-    data_path_list = glob(osp.join(dataset_path, split + '_SMPLX', 'SMPLX', '*.pkl')) + glob(osp.join(dataset_path, split + '_SMPL', 'SMPL', '*.pkl'))
+    data_path_list = glob(osp.join(dataset_path, split + '_SMPLX', 'SMPLX', '*.pkl'))
     data_path_list = sorted(data_path_list)
 
     for data_path in tqdm(data_path_list):
