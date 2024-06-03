@@ -1,5 +1,7 @@
 # AGORA dataset parsing process
 
+All files can be downloaded from [here](https://agora.is.tue.mpg.de/download.php).
+
 ## Cleaning SMPL parameters
 * This process will convert CudaFloatTensor smpl parameters to numpy format.
 * Download and unzip `smpl_gt.zip` and `smplx_gt.zip`
@@ -7,7 +9,7 @@
 
 ## Make annotation files
 * This code will dump GT 2D/3D joints and 3D vertices of SMPL and SMPL-X in $PATH1. Also, it will generate `AGORA_train.json` and `AGORA_validation.json` in $PATH1.
-* Download and unzip `train_SMPL.zip`, `train_SMPLX.zip`, `validation_SMPL.zip`, and `validation_SMPLX.zip` from [here](https://agora.is.tue.mpg.de/download.php).
+* Download and unzip `train_SMPL.zip`, `train_SMPLX.zip`, `validation_SMPL.zip`, and `validation_SMPLX.zip`.
 * Run `python agora2coco.py --dataset_path $PATH1 --human_model_path $PATH2`. $PATH1 denotes AGORA dataset path. $PATH2 denotes human model layer path. 
 
 ## Preparing 1280x720 image files
