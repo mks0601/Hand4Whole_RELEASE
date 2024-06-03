@@ -6,7 +6,6 @@ from glob import glob
 from tqdm import tqdm
 import cv2
 import pickle
-import smplx
 import os
 import pathlib
 import argparse
