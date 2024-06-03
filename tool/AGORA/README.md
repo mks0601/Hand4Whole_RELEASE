@@ -3,7 +3,7 @@
 ## Cleaning SMPL parameters
 * This process will convert CudaFloatTensor smpl parameters to numpy format.
 * Download and unzip `smpl_gt.zip` and `smplx_gt.zip`
-* Run `python tensor_to_numpy_parameter.py --dataset_path $PATH1`. $PATH1 denotes AGORA dataset path. 
+* Run `python tensor_to_numpy_parameter.py --dataset_path $PATH1 --human_model {smpl,smplx}`. $PATH1 denotes AGORA dataset path. 
 
 ## Make annotation files
 * This code will dump GT 2D/3D joints and 3D vertices of SMPL and SMPL-X in $PATH1. Also, it will generate `AGORA_train.json` and `AGORA_validation.json` in $PATH1.
