@@ -25,24 +25,6 @@ def get_bbox(joint_img, joint_valid):
     bbox = np.array([xmin, ymin, xmax - xmin, ymax - ymin]).astype(np.float32)
     return bbox
 
-def load_obj(file_name):
-    v = []
-    obj_file = open(file_name)
-    for line in obj_file:
-        words = line.split(' ')
-        if words[0] == 'v':
-            x,y,z = float(words[1]), float(words[2]), float(words[3])
-            v.append(np.array([x,y,z]))
-    return np.stack(v)
-
-def save_obj(v, f, file_name='output.obj'):
-    obj_file = open(file_name, 'w')
-    for i in range(len(v)):
-        obj_file.write('v ' + str(v[i][0]) + ' ' + str(v[i][1]) + ' ' + str(v[i][2]) + '\n')
-    for i in range(len(f)):
-        obj_file.write('f ' + str(f[i][0]+1) + '/' + str(f[i][0]+1) + ' ' + str(f[i][1]+1) + '/' + str(f[i][1]+1) + ' ' + str(f[i][2]+1) + '/' + str(f[i][2]+1) + '\n')
-    obj_file.close()
-
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset_path', type=str, dest='dataset_path')
