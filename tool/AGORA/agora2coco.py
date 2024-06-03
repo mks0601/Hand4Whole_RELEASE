@@ -7,7 +7,6 @@ from tqdm import tqdm
 import cv2
 import pickle
 import os
-import pathlib
 import argparse
 
 def get_bbox(joint_img, joint_valid):
@@ -76,14 +75,13 @@ smplx_joint_part = {
             'lhand': list(range(smplx_joints_name.index('L_Index_1'), smplx_joints_name.index('L_Thumb_3')+1)) + list(range(smplx_joints_name.index('L_Thumb_4'), smplx_joints_name.index('L_Pinky_4')+1)),
             'rhand': list(range(smplx_joints_name.index('R_Index_1'), smplx_joints_name.index('R_Thumb_3')+1)) + list(range(smplx_joints_name.index('R_Thumb_4'), smplx_joints_name.index('R_Pinky_4')+1)),
             'face': list(range(smplx_joints_name.index('Face_5'), smplx_joints_name.index('Face_55')+1))}
-smpl_joints_name = ('Pelvis', 'L_Hip', 'R_Hip', 'Spine_1', 'L_Knee', 'R_Knee', 'Spine_2', 'L_Ankle', 'R_Ankle', 'Spine_3', 'L_Foot', 'R_Foot', 'Neck', 'L_Collar', 'R_Collar', 'Head', 'L_Shoulder', 'R_Shoulder', 'L_Elbow', 'R_E     lbow', 'L_Wrist', 'R_Wrist', 'L_Hand', 'R_Hand', 'Nose', 'R_Eye', 'L_Eye', 'R_Ear', 'L_Ear', 'L_Big_toe', 'L_Small_toe', 'L_Heel', 'R_Big_toe', 'R_Small_toe', 'R_Heel', 'L_Thumb_4', 'L_Index_4', 'L_Middle_4', 'L_Ring_4', 'L_Pinky_4', 'R_Thumb_4', 'R_Index_4', 'R_Middle_4', 'R_Ring_4', 'R_Pinky_4')
 
-pathlib.Path(osp.join(dataset_path, gt_joints_2d_path, 'smplx')).mkdir(parents=True, exist_ok=True)
-pathlib.Path(osp.join(dataset_path, gt_joints_3d_path, 'smplx')).mkdir(parents=True, exist_ok=True)
-pathlib.Path(osp.join(dataset_path, gt_verts_path, 'smplx')).mkdir(parents=True, exist_ok=True)
-pathlib.Path(osp.join(dataset_path, gt_joints_2d_path, 'smpl')).mkdir(parents=True, exist_ok=True)
-pathlib.Path(osp.join(dataset_path, gt_joints_3d_path, 'smpl')).mkdir(parents=True, exist_ok=True)
-pathlib.Path(osp.join(dataset_path, gt_verts_path, 'smpl')).mkdir(parents=True, exist_ok=True)
+os.makedirs(osp.join(dataset_path, gt_joints_2d_path, 'smplx'), exist_ok=True)
+os.makedirs(osp.join(dataset_path, gt_joints_3d_path, 'smplx'), exist_ok=True)
+os.makedirs(osp.join(dataset_path, gt_verts_path, 'smplx'), exist_ok=True)
+os.makedirs(osp.join(dataset_path, gt_joints_2d_path, 'smpl'), exist_ok=True)
+os.makedirs(osp.join(dataset_path, gt_joints_3d_path, 'smpl'), exist_ok=True)
+os.makedirs(osp.join(dataset_path, gt_verts_path, 'smpl'), exist_ok=True)
 
 for split in ('train', 'validation'):
     images = []
