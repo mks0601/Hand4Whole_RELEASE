@@ -33,8 +33,10 @@ All files can be downloaded from [here](https://agora.is.tue.mpg.de/download.php
 ## Final directory
 ```
 ${DATASET_PATH}
-|-- AGORA_train.json
-|-- AGORA_validation.json
+|-- AGORA_train_SMPL.json
+|-- AGORA_validation_SMPL.json
+|-- AGORA_train_SMPLX.json
+|-- AGORA_validation_SMPLX.json
 |-- AGORA_test_bbox.json
 |-- gt_joints_2d
 |-- |-- smpl
