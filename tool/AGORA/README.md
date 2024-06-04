@@ -27,7 +27,7 @@ All files can be downloaded from [here](https://agora.is.tue.mpg.de/download.php
 * To this end, run `python affine_transom.py --dataset_path $DATASET_PATH --out_height 512 --out_width 384`. $DATASET_PATH denotes AGORA dataset path. 
 
 ## Download `AGORA_test_bbox.json`
-* Download human detection results on test set from [here](https://drive.google.com/file/d/1dGIMsX00xUIwlFTa1gtU9bTxbfTpMt9T/view?usp=share_link)
+* Download human detection results on test set from [here](https://drive.google.com/file/d/1dGIMsX00xUIwlFTa1gtU9bTxbfTpMt9T/view?usp=share_link).
 * The human detection results are from YOLO v5.
 
 ## Final directory
