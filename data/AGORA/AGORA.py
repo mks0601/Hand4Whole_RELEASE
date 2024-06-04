@@ -68,9 +68,9 @@ class AGORA(torch.utils.data.Dataset):
         datalist = []
         if self.data_split == 'train' or (self.data_split == 'test' and self.test_set == 'val'): 
             if self.data_split == 'train':
-                db = COCO(osp.join(self.data_path, 'AGORA_train.json'))
+                db = COCO(osp.join(self.data_path, 'AGORA_train_SMPLX.json'))
             else:
-                db = COCO(osp.join(self.data_path, 'AGORA_validation.json'))
+                db = COCO(osp.join(self.data_path, 'AGORA_validation_SMPLX.json'))
             
             for aid in db.anns.keys():
                 ann = db.anns[aid]
