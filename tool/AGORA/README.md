@@ -1,8 +1,10 @@
 # AGORA dataset parsing process
 
-All files can be downloaded from [here](https://agora.is.tue.mpg.de/download.php).
+* All files can be downloaded from [here](https://agora.is.tue.mpg.de/download.php).
+* If you want only one of SMPL and SMPLX data, you can ignore the other one.
+* This repo requires only SMPLX data, while [Pose2Pose branch](https://github.com/mks0601/Hand4Whole_RELEASE/tree/Pose2Pose) requires only SMPL data.
 
-## Cleaning SMPL parameters
+## Cleaning SMPL/SMPLX parameters
 * This process will convert CudaFloatTensor smpl parameters to numpy format.
 * Download and unzip `smpl_gt.zip` and `smplx_gt.zip`
 * Run `python tensor_to_numpy_parameter.py --dataset_path $DATASET_PATH --human_model {smpl,smplx}`. $DATASET_PATH denotes AGORA dataset path. 
