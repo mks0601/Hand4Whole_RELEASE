@@ -8,9 +8,10 @@ All files can be downloaded from [here](https://agora.is.tue.mpg.de/download.php
 * Run `python tensor_to_numpy_parameter.py --dataset_path $DATASET_PATH --human_model {smpl,smplx}`. $DATASET_PATH denotes AGORA dataset path. 
 
 ## Make annotation files
-* This code will dump GT 2D/3D joints and 3D vertices of SMPL and SMPL-X in $DATASET_PATH. Also, it will generate `AGORA_train.json` and `AGORA_validation.json` in $DATASET_PATH.
-* Download and unzip `train_SMPL.zip`, `train_SMPLX.zip`, `validation_SMPL.zip`, and `validation_SMPLX.zip`.
-* Run `python agora2coco.py --dataset_path $DATASET_PATH`. $DATASET_PATH denotes AGORA dataset path. 
+* This code will dump GT 2D/3D joints and 3D vertices of SMPL and SMPL-X in $DATASET_PATH. Also, it will generate `AGORA_train_SMPL.json`, `AGORA_validation_SMPL.json`, `AGORA_train_SMPLX.json`, and `AGORA_validation_SMPLX.json` in $DATASET_PATH.
+* For the SMPL data, 1) download and unzip  `train_SMPL.zip` and `validation_SMPL.zip` and 2) run  `python agora2coco_smpl.py --dataset_path $DATASET_PATH`.
+* For the SMPL-X data, 1) download and unzip  `train_SMPLX.zip` and `validation_SMPLX.zip` and 2) run  `python agora2coco_smplx.py --dataset_path $DATASET_PATH`.
+* $DATASET_PATH denotes AGORA dataset path. 
 
 ## Preparing 1280x720 image files
 * This code will prepare 1280x720 image files.
