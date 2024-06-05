@@ -78,11 +78,8 @@ class AGORA(torch.utils.data.Dataset):
                 img = db.loadImgs(image_id)[0]
                 if not ann['is_valid']:
                     continue
-                
-                joints_2d_path = osp.join(self.data_path, ann['smplx_joints_2d_path'])
-                joints_3d_path = osp.join(self.data_path, ann['smplx_joints_3d_path'])
-                verts_path = osp.join(self.data_path, ann['smplx_verts_path'])
                 smplx_param_path = osp.join(self.data_path, ann['smplx_param_path'])
+                cam_param_path = osp.join(self.data_path, ann['cam_param_path'])
                
                 if self.resolution == (720, 1280):
                     img_shape = self.resolution
@@ -121,7 +118,7 @@ class AGORA(torch.utils.data.Dataset):
                     if face_bbox is not None:
                         face_bbox[2:] += face_bbox[:2] # xywh -> xyxy
 
-                    data_dict = {'img_path': img_path, 'img_shape': img_shape, 'bbox': bbox, 'lhand_bbox': lhand_bbox, 'rhand_bbox': rhand_bbox, 'face_bbox': face_bbox, 'joints_2d_path': joints_2d_path, 'joints_3d_path': joints_3d_path, 'verts_path': verts_path, 'smplx_param_path': smplx_param_path, 'ann_id': str(aid)}
+                    data_dict = {'img_path': img_path, 'img_shape': img_shape, 'bbox': bbox, 'lhand_bbox': lhand_bbox, 'rhand_bbox': rhand_bbox, 'face_bbox': face_bbox, 'smplx_param_path': smplx_param_path, 'cam_param_path': cam_param_path, 'ann_id': str(aid)}
                     datalist.append(data_dict)
 
                 elif self.resolution == (2160, 3840): # use cropped and resized images. loading 4K images in pytorch dataloader takes too much time...
@@ -166,7 +163,7 @@ class AGORA(torch.utils.data.Dataset):
                     if face_bbox is not None:
                         face_bbox[2:] += face_bbox[:2] # xywh -> xyxy
 
-                    data_dict = {'img_path': img_path, 'img_shape': img_shape, 'bbox': bbox, 'lhand_bbox': lhand_bbox, 'rhand_bbox': rhand_bbox, 'face_bbox': face_bbox, 'img2bb_trans_from_orig': img2bb_trans_from_orig, 'joints_2d_path': joints_2d_path, 'joints_3d_path': joints_3d_path, 'verts_path': verts_path, 'smplx_param_path': smplx_param_path, 'ann_id': str(aid)}
+                    data_dict = {'img_path': img_path, 'img_shape': img_shape, 'bbox': bbox, 'lhand_bbox': lhand_bbox, 'rhand_bbox': rhand_bbox, 'face_bbox': face_bbox, 'img2bb_trans_from_orig': img2bb_trans_from_orig, 'smplx_param_path': smplx_param_path, 'cam_param_path': cam_param_path, 'ann_id': str(aid)}
                     datalist.append(data_dict)
 
         elif self.data_split == 'test' and self.test_set == 'test':
@@ -255,18 +252,6 @@ class AGORA(torch.utils.data.Dataset):
         img = self.transform(img.astype(np.float32))/255.
        
         if self.data_split == 'train':
-            # gt load
-            with open(data['joints_2d_path']) as f:
-                joint_img = np.array(json.load(f)).reshape(-1,2)
-                if self.resolution == (2160, 3840):
-                    joint_img[:,:2] = np.dot(data['img2bb_trans_from_orig'], np.concatenate((joint_img, np.ones_like(joint_img[:,:1])),1).transpose(1,0)).transpose(1,0) # transform from original image to crop_and_resize image
-                joint_img[:,0] = joint_img[:,0] / 3840 * self.resolution[1]
-                joint_img[:,1] = joint_img[:,1] / 2160 * self.resolution[0]
-            with open(data['joints_3d_path']) as f:
-                joint_cam = np.array(json.load(f)).reshape(-1,3)
-            with open(data['smplx_param_path'], 'rb') as f:
-                smplx_param = pickle.load(f, encoding='latin1')
-
             # hand and face bbox transform
             lhand_bbox, rhand_bbox, face_bbox = data['lhand_bbox'], data['rhand_bbox'], data['face_bbox']
             lhand_bbox, lhand_bbox_valid = self.process_hand_face_bbox(lhand_bbox, do_flip, img_shape, img2bb_trans)
@@ -302,57 +287,26 @@ class AGORA(torch.utils.data.Dataset):
             #cv2.imwrite('agora_' + str(idx) + '.jpg', _img)
             """
             
-            # coordinates
-            joint_cam = joint_cam - joint_cam[self.joint_set['root_joint_idx'],None,:] # root-relative
-            joint_cam[self.joint_set['joint_part']['lhand'],:] = joint_cam[self.joint_set['joint_part']['lhand'],:] - joint_cam[self.joint_set['lwrist_idx'],None,:] # left hand root-relative
-            joint_cam[self.joint_set['joint_part']['rhand'],:] = joint_cam[self.joint_set['joint_part']['rhand'],:] - joint_cam[self.joint_set['rwrist_idx'],None,:] # right hand root-relative
-            joint_cam[self.joint_set['joint_part']['face'],:] = joint_cam[self.joint_set['joint_part']['face'],:] - joint_cam[self.joint_set['neck_idx'],None,:] # face root-relative
-            joint_img = np.concatenate((joint_img[:,:2], joint_cam[:,2:]),1) # x, y, depth
-            joint_img[self.joint_set['joint_part']['body'],2] = (joint_cam[self.joint_set['joint_part']['body'],2].copy() / (cfg.body_3d_size / 2) + 1)/2. * cfg.output_hm_shape[0] # body depth discretize
-            joint_img[self.joint_set['joint_part']['lhand'],2] = (joint_cam[self.joint_set['joint_part']['lhand'],2].copy() / (cfg.hand_3d_size / 2) + 1)/2. * cfg.output_hm_shape[0] # left hand depth discretize
-            joint_img[self.joint_set['joint_part']['rhand'],2] = (joint_cam[self.joint_set['joint_part']['rhand'],2].copy() / (cfg.hand_3d_size / 2) + 1)/2. * cfg.output_hm_shape[0] # right hand depth discretize
-            joint_img[self.joint_set['joint_part']['face'],2] = (joint_cam[self.joint_set['joint_part']['face'],2].copy() / (cfg.face_3d_size / 2) + 1)/2. * cfg.output_hm_shape[0] # face depth discretize
-            joint_valid = np.ones_like(joint_img[:,:1])
-            joint_img, joint_cam, joint_valid, joint_trunc = process_db_coord(joint_img, joint_cam, joint_valid, do_flip, img_shape, self.joint_set['flip_pairs'], img2bb_trans, rot, self.joint_set['joints_name'], smpl_x.joints_name)
-            
-            """
-            # for debug
-            _tmp = joint_img.copy() 
-            _tmp[:,0] = _tmp[:,0] / cfg.output_hm_shape[2] * cfg.input_img_shape[1]
-            _tmp[:,1] = _tmp[:,1] / cfg.output_hm_shape[1] * cfg.input_img_shape[0]
-            _img = img.numpy().transpose(1,2,0)[:,:,::-1] * 255
-            _img = vis_keypoints(_img.copy(), _tmp)
-            cv2.imwrite('agora_' + str(idx) + '.jpg', _img)
-            """
-            
-            """
-            # for debug
-            _tmp = joint_cam.copy()[:,:2]
-            _tmp[:,0] = _tmp[:,0] / (cfg.body_3d_size / 2) * cfg.input_img_shape[1] + cfg.input_img_shape[1]/2
-            _tmp[:,1] = _tmp[:,1] / (cfg.body_3d_size / 2) * cfg.input_img_shape[0] + cfg.input_img_shape[0]/2
-            _img = np.zeros((cfg.input_img_shape[0], cfg.input_img_shape[1], 3), dtype=np.float32)
-            _img = vis_keypoints(_img.copy(), _tmp)
-            cv2.imwrite('agora_' + str(idx) + '_cam.jpg', _img)
-            """
-            
             # smplx parameters
-            root_pose = np.array(smplx_param['global_orient'], dtype=np.float32).reshape(-1) # rotation to world coordinate
+            with open(data['smplx_param_path']) as f:
+                smplx_param = json.load(f)
+            root_pose = np.array(smplx_param['global_orient'], dtype=np.float32).reshape(-1) 
             body_pose = np.array(smplx_param['body_pose'], dtype=np.float32).reshape(-1)
-            shape = np.array(smplx_param['betas'], dtype=np.float32).reshape(-1)[:10] # bug?
+            shape = np.array(smplx_param['betas'], dtype=np.float32).reshape(-1)[:10]
             lhand_pose = np.array(smplx_param['left_hand_pose'], dtype=np.float32).reshape(-1)
             rhand_pose = np.array(smplx_param['right_hand_pose'], dtype=np.float32).reshape(-1)
             jaw_pose = np.array(smplx_param['jaw_pose'], dtype=np.float32).reshape(-1)
             expr = np.array(smplx_param['expression'], dtype=np.float32).reshape(-1)
-            trans = np.array(smplx_param['transl'], dtype=np.float32).reshape(-1) # translation to world coordinate
-            cam_param = {'focal': cfg.focal, 'princpt': cfg.princpt} # put random camera paraemter as we do not use coordinates from smplx parameters
+            trans = np.array(smplx_param['transl'], dtype=np.float32).reshape(-1) 
+            with open(data['cam_param_path']) as f:
+                cam_param = json.load(f)
             smplx_param = {'root_pose': root_pose, 'body_pose': body_pose, 'shape': shape,
                     'lhand_pose': lhand_pose, 'lhand_valid': True, 
                     'rhand_pose': rhand_pose, 'rhand_valid': True, 
                     'jaw_pose': jaw_pose, 'expr': expr, 'face_valid': True,
                     'trans': trans}
-            _, _, _, smplx_pose, smplx_shape, smplx_expr, smplx_pose_valid, _, smplx_expr_valid, _ = process_human_model_output(smplx_param, cam_param, do_flip, img_shape, img2bb_trans, rot, 'smplx')
+            smplx_joint_img, smplx_joint_cam, smplx_joint_trunc, smplx_pose, smplx_shape, smplx_expr, smplx_pose_valid, smplx_joint_valid, smplx_expr_valid, smplx_mesh_cam_orig = process_human_model_output(smplx_param, cam_param, do_flip, img_shape, img2bb_trans, rot, 'smplx')
             smplx_pose_valid = np.tile(smplx_pose_valid[:,None], (1,3)).reshape(-1)
-            smplx_pose_valid[:3] = 0 # global orient of the provided parameter is a rotation to world coordinate system. I want camera coordinate system.
             smplx_shape_valid = True
 
             inputs = {'img': img}
@@ -372,12 +326,28 @@ class AGORA(torch.utils.data.Dataset):
                 img2bb_trans = img2bb_trans[:2,:]
 
             if self.test_set == 'val':
-                # gt load
-                with open(data['verts_path']) as f:
-                    verts = np.array(json.load(f)).reshape(-1,3)
+                # smplx parameters
+                with open(data['smplx_param_path']) as f:
+                    smplx_param = json.load(f)
+                root_pose = np.array(smplx_param['global_orient'], dtype=np.float32).reshape(-1) 
+                body_pose = np.array(smplx_param['body_pose'], dtype=np.float32).reshape(-1)
+                shape = np.array(smplx_param['betas'], dtype=np.float32).reshape(-1)[:10]
+                lhand_pose = np.array(smplx_param['left_hand_pose'], dtype=np.float32).reshape(-1)
+                rhand_pose = np.array(smplx_param['right_hand_pose'], dtype=np.float32).reshape(-1)
+                jaw_pose = np.array(smplx_param['jaw_pose'], dtype=np.float32).reshape(-1)
+                expr = np.array(smplx_param['expression'], dtype=np.float32).reshape(-1)
+                trans = np.array(smplx_param['transl'], dtype=np.float32).reshape(-1) 
+                with open(data['cam_param_path']) as f:
+                    cam_param = json.load(f)
+                smplx_param = {'root_pose': root_pose, 'body_pose': body_pose, 'shape': shape,
+                        'lhand_pose': lhand_pose, 'lhand_valid': True, 
+                        'rhand_pose': rhand_pose, 'rhand_valid': True, 
+                        'jaw_pose': jaw_pose, 'expr': expr, 'face_valid': True,
+                        'trans': trans}
+                smplx_joint_img, smplx_joint_cam, smplx_joint_trunc, smplx_pose, smplx_shape, smplx_expr, smplx_pose_valid, smplx_joint_valid, smplx_expr_valid, smplx_mesh_cam_orig = process_human_model_output(smplx_param, cam_param, do_flip, img_shape, img2bb_trans, rot, 'smplx')
 
                 inputs = {'img': img}
-                targets = {'smplx_mesh_cam': verts}
+                targets = {'smplx_mesh_cam': smplx_mesh_cam_orig}
                 meta_info = {'bb2img_trans': bb2img_trans}
             else:
                 inputs = {'img': img}
