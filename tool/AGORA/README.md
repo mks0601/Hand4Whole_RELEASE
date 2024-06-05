@@ -4,15 +4,10 @@
 * If you want only one of SMPL and SMPLX data, you can ignore the other one.
 * This repo requires only SMPLX data, while [Pose2Pose branch](https://github.com/mks0601/Hand4Whole_RELEASE/tree/Pose2Pose) requires only SMPL data.
 
-## Cleaning SMPL/SMPLX parameters
-* This process will convert CudaFloatTensor smpl parameters to numpy format.
-* Download and unzip `smpl_gt.zip` and `smplx_gt.zip`
-* Run `python tensor_to_numpy_parameter.py --dataset_path $DATASET_PATH --human_model {smpl,smplx}`. $DATASET_PATH denotes AGORA dataset path. 
-
 ## Make annotation files
-* This code will dump GT 2D/3D joints and 3D vertices of SMPL and SMPL-X in $DATASET_PATH. Also, it will generate `AGORA_train_SMPL.json`, `AGORA_validation_SMPL.json`, `AGORA_train_SMPLX.json`, and `AGORA_validation_SMPLX.json` in $DATASET_PATH.
-* For the SMPL data, 1) download and unzip  `train_SMPL.zip` and `validation_SMPL.zip` and 2) run  `python agora2coco_smpl.py --dataset_path $DATASET_PATH`.
-* For the SMPLX data, 1) download and unzip  `train_SMPLX.zip` and `validation_SMPLX.zip` and 2) run  `python agora2coco_smplx.py --dataset_path $DATASET_PATH`.
+* This code will dump SMPL/SMPLX parameters in camera-centered coordinate system and camera parameters at `smpl_params_cam/smplx_params_cam` and `cam_params` folders, respectively, in $DATASET_PATH. Also, it will generate `AGORA_train_SMPL.json`, `AGORA_validation_SMPL.json`, `AGORA_train_SMPLX.json`, and `AGORA_validation_SMPLX.json` in $DATASET_PATH.
+* For the SMPL data, 1) download and unzip  `smpl_gt.zip`, `train_SMPL.zip`, and `validation_SMPL.zip` and 2) run  `python agora2coco_smpl.py --dataset_path $DATASET_PATH`.
+* For the SMPLX data, 1) download and unzip  `smplx_gt.zip`, `train_SMPLX.zip` and `validation_SMPLX.zip` and 2) run  `python agora2coco_smplx.py --dataset_path $DATASET_PATH`.
 * $DATASET_PATH denotes AGORA dataset path. 
 
 ## Preparing 1280x720 image files
@@ -40,15 +35,42 @@ ${DATASET_PATH}
 |-- AGORA_train_SMPLX.json
 |-- AGORA_validation_SMPLX.json
 |-- AGORA_test_bbox.json
-|-- gt_joints_2d
-|-- |-- smpl
-|-- |-- smplx
-|-- gt_joints_3d
-|-- |-- smpl
-|-- |-- smplx
-|-- gt_verts
-|-- |-- smpl
-|-- |-- smplx
+|-- smpl_params_cam
+|   |-- train_0
+|   |-- train_1
+|   |-- train_2
+|   |-- train_3
+|   |-- train_4
+|   |-- train_5
+|   |-- train_6
+|   |-- train_7
+|   |-- train_8
+|   |-- train_9
+|   |-- validation
+|-- smplx_params_cam
+|   |-- train_0
+|   |-- train_1
+|   |-- train_2
+|   |-- train_3
+|   |-- train_4
+|   |-- train_5
+|   |-- train_6
+|   |-- train_7
+|   |-- train_8
+|   |-- train_9
+|   |-- validation
+|-- cam_params
+|   |-- train_0
+|   |-- train_1
+|   |-- train_2
+|   |-- train_3
+|   |-- train_4
+|   |-- train_5
+|   |-- train_6
+|   |-- train_7
+|   |-- train_8
+|   |-- train_9
+|   |-- validation
 |-- 1280x720
 |   |-- train_0
 |   |-- train_1
