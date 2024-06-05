@@ -21,47 +21,6 @@ class AGORA(torch.utils.data.Dataset):
         self.data_path = osp.join('..', 'data', 'AGORA', 'data')
         self.resolution = (2160, 3840) # height, width. one of (720, 1280) and (2160, 3840)
         self.test_set = 'val' # val, test
-
-        # AGORA joint set
-        self.joint_set = {
-                            'joint_num': 127, 
-                            'joints_name': \
-                                ('Pelvis', 'L_Hip', 'R_Hip', 'Spine_1', 'L_Knee', 'R_Knee', 'Spine_2', 'L_Ankle', 'R_Ankle', 'Spine_3', 'L_Foot', 'R_Foot', 'Neck', 'L_Collar', 'R_Collar', 'Head', 'L_Shoulder', 'R_Shoulder', 'L_Elbow', 'R_Elbow', 'L_Wrist', 'R_Wrist',  # body
-                                'Jaw', 'L_Eye_SMPLH', 'R_Eye_SMPLH',  # SMPLH
-                                'L_Index_1', 'L_Index_2', 'L_Index_3', 'L_Middle_1', 'L_Middle_2', 'L_Middle_3', 'L_Pinky_1', 'L_Pinky_2', 'L_Pinky_3', 'L_Ring_1', 'L_Ring_2', 'L_Ring_3', 'L_Thumb_1', 'L_Thumb_2', 'L_Thumb_3',  # fingers
-                                'R_Index_1', 'R_Index_2', 'R_Index_3', 'R_Middle_1', 'R_Middle_2', 'R_Middle_3', 'R_Pinky_1', 'R_Pinky_2', 'R_Pinky_3', 'R_Ring_1', 'R_Ring_2', 'R_Ring_3', 'R_Thumb_1', 'R_Thumb_2', 'R_Thumb_3',  # fingers
-                                'Nose', 'R_Eye', 'L_Eye', 'R_Ear', 'L_Ear',  # face in body
-                                'L_Big_toe', 'L_Small_toe', 'L_Heel', 'R_Big_toe', 'R_Small_toe', 'R_Heel',  # feet
-                                'L_Thumb_4', 'L_Index_4', 'L_Middle_4', 'L_Ring_4', 'L_Pinky_4',  # finger tips
-                                'R_Thumb_4', 'R_Index_4', 'R_Middle_4', 'R_Ring_4', 'R_Pinky_4', # finger tips
-                                *['Face_' + str(i) for i in range(5,56)] # face
-                                ),
-                            'flip_pairs': \
-                                ((1,2), (4,5), (7,8), (10,11), (13,14), (16,17), (18,19), (20,21),  # body
-                                (23,24), # SMPLH
-                                (25,40), (26,41), (27,42), (28,43), (29,44), (30,45), (31,46), (32,47), (33,48), (34,49), (35,50), (36,51), (37,52), (38,53), (39,54), # fingers
-                                (56,57), (58,59), # face in body
-                                (60,63), (61,64), (62,65), # feet
-                                (66,71), (67,72), (68,73), (69,74), (70,75), # fingertips
-                                (76,85), (77,84), (78,83), (79,82), (80,81), # face eyebrow
-                                (90,94), (91,93), # face below nose
-                                (95,104), (96,103), (97,102), (98,101), (99,106), (100,105), # face eyes
-                                (107,113), (108,112), (109,111), (114,118), (115,117), # face mouth
-                                (119,123), (120,122), (124,126) # face lip
-                                )
-
-                        }
-
-        self.joint_set['joint_part'] = {
-                                    'body': list(range(self.joint_set['joints_name'].index('Pelvis'), self.joint_set['joints_name'].index('R_Eye_SMPLH')+1)) + list(range(self.joint_set['joints_name'].index('Nose'), self.joint_set['joints_name'].index('R_Heel')+1)),
-                                    'lhand': list(range(self.joint_set['joints_name'].index('L_Index_1'), self.joint_set['joints_name'].index('L_Thumb_3')+1)) + list(range(self.joint_set['joints_name'].index('L_Thumb_4'), self.joint_set['joints_name'].index('L_Pinky_4')+1)),
-                                    'rhand': list(range(self.joint_set['joints_name'].index('R_Index_1'), self.joint_set['joints_name'].index('R_Thumb_3')+1)) + list(range(self.joint_set['joints_name'].index('R_Thumb_4'), self.joint_set['joints_name'].index('R_Pinky_4')+1)),
-                                    'face': list(range(self.joint_set['joints_name'].index('Face_5'), self.joint_set['joints_name'].index('Face_55')+1))}
-        self.joint_set['root_joint_idx'] = self.joint_set['joints_name'].index('Pelvis')
-        self.joint_set['lwrist_idx'] = self.joint_set['joints_name'].index('L_Wrist')
-        self.joint_set['rwrist_idx'] = self.joint_set['joints_name'].index('R_Wrist')
-        self.joint_set['neck_idx'] = self.joint_set['joints_name'].index('Neck')
-
         self.datalist = self.load_data()
  
     def load_data(self):
@@ -190,8 +149,8 @@ class AGORA(torch.utils.data.Dataset):
                 elif self.resolution == (2160, 3840): # use cropped and resized images. loading 4K images in pytorch dataloader takes too much time...
                     person_num = len(bboxs[filename])
                     for person_id in range(person_num):
-                        img_path = osp.join(self.data_path, '3840x2160', 'test_crop', filename[:-4] + '_person_id_' + str(person_id) + '.png')
-                        json_path = osp.join(self.data_path, '3840x2160', 'test_crop', filename[:-4] + '_person_id_' + str(person_id) + '.json')
+                        img_path = osp.join(self.data_path, 'images_3840x2160', 'test_crop', filename[:-4] + '_person_id_' + str(person_id) + '.png')
+                        json_path = osp.join(self.data_path, 'images_3840x2160', 'test_crop', filename[:-4] + '_person_id_' + str(person_id) + '.json')
                         if not osp.isfile(json_path):
                             continue
                         with open(json_path) as f:
