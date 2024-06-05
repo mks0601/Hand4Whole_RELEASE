@@ -250,6 +250,13 @@ class AGORA(torch.utils.data.Dataset):
         # affine transform
         img, img2bb_trans, bb2img_trans, rot, do_flip = augmentation(img, bbox, self.data_split)
         img = self.transform(img.astype(np.float32))/255.
+
+        # transform from original image to crop_and_resize image
+        if self.resolution == (2160, 3840):
+            mat1 = np.concatenate((data['img2bb_trans_from_orig'], np.array([0,0,1], dtype=np.float32)))
+            mat2 = np.concatenate((img2bb_trans, np.array([0,0,1], dtype=np.float32)))
+            img2bb_trans = np.dot(mat2, mat1)[:2,:3]
+            bb2img_trans = np.dot(np.linalg.inv(mat1), np.linalg.inv(mat2))[:2,:3]
        
         if self.data_split == 'train':
             # hand and face bbox transform
@@ -310,21 +317,10 @@ class AGORA(torch.utils.data.Dataset):
             smplx_shape_valid = True
 
             inputs = {'img': img}
-            targets = {'joint_img': joint_img, 'joint_cam': joint_cam, 'smplx_joint_img': joint_img, 'smplx_joint_cam': joint_cam, 'smplx_pose': smplx_pose, 'smplx_shape': smplx_shape, 'smplx_expr': smplx_expr, 'lhand_bbox_center': lhand_bbox_center, 'lhand_bbox_size': lhand_bbox_size, 'rhand_bbox_center': rhand_bbox_center, 'rhand_bbox_size': rhand_bbox_size, 'face_bbox_center': face_bbox_center, 'face_bbox_size': face_bbox_size}
-            meta_info = {'joint_valid': joint_valid, 'joint_trunc': joint_trunc, 'smplx_joint_valid': np.zeros_like(joint_valid), 'smplx_joint_trunc': np.zeros_like(joint_trunc), 'smplx_pose_valid': smplx_pose_valid, 'smplx_shape_valid': float(smplx_shape_valid), 'smplx_expr_valid': float(smplx_expr_valid), 'is_3D': float(True), 'lhand_bbox_valid': lhand_bbox_valid, 'rhand_bbox_valid': rhand_bbox_valid, 'face_bbox_valid': face_bbox_valid}
+            targets = {'joint_img': smplx_joint_img, 'joint_cam': smplx_joint_cam, 'smplx_joint_img': smplx_joint_img, 'smplx_joint_cam': smplx_joint_cam, 'smplx_pose': smplx_pose, 'smplx_shape': smplx_shape, 'smplx_expr': smplx_expr, 'lhand_bbox_center': lhand_bbox_center, 'lhand_bbox_size': lhand_bbox_size, 'rhand_bbox_center': rhand_bbox_center, 'rhand_bbox_size': rhand_bbox_size, 'face_bbox_center': face_bbox_center, 'face_bbox_size': face_bbox_size}
+            meta_info = {'joint_valid': smplx_joint_valid, 'joint_trunc': smplx_joint_trunc, 'smplx_joint_valid': smplx_joint_valid, 'smplx_joint_trunc': smplx_joint_trunc, 'smplx_pose_valid': smplx_pose_valid, 'smplx_shape_valid': float(smplx_shape_valid), 'smplx_expr_valid': float(smplx_expr_valid), 'is_3D': float(True), 'lhand_bbox_valid': lhand_bbox_valid, 'rhand_bbox_valid': rhand_bbox_valid, 'face_bbox_valid': face_bbox_valid}
             return inputs, targets, meta_info
         else:
-            # load crop and resize information (for the 4K setting)
-            if self.resolution == (2160, 3840):
-                img2bb_trans = np.dot(
-                                    np.concatenate((img2bb_trans,
-                                                    np.array([0,0,1], dtype=np.float32).reshape(1,3))),
-                                    np.concatenate((data['img2bb_trans_from_orig'],
-                                                    np.array([0,0,1], dtype=np.float32).reshape(1,3)))
-                                    )
-                bb2img_trans = np.linalg.inv(img2bb_trans)[:2,:]
-                img2bb_trans = img2bb_trans[:2,:]
-
             if self.test_set == 'val':
                 # smplx parameters
                 with open(data['smplx_param_path']) as f:
