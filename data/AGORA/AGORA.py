@@ -284,14 +284,14 @@ class AGORA(torch.utils.data.Dataset):
             meta_info = {'joint_valid': smplx_joint_valid, 'joint_trunc': smplx_joint_trunc, 'smplx_joint_valid': smplx_joint_valid, 'smplx_joint_trunc': smplx_joint_trunc, 'smplx_pose_valid': smplx_pose_valid, 'smplx_shape_valid': float(smplx_shape_valid), 'smplx_expr_valid': float(smplx_expr_valid), 'is_3D': float(True), 'lhand_bbox_valid': lhand_bbox_valid, 'rhand_bbox_valid': rhand_bbox_valid, 'face_bbox_valid': face_bbox_valid}
             return inputs, targets, meta_info
         else:
+            # transform from original image to crop_and_resize image
+            if self.resolution == (2160, 3840):
+                mat1 = np.concatenate((data['img2bb_trans_from_orig'], np.array([0,0,1], dtype=np.float32)))
+                mat2 = np.concatenate((img2bb_trans, np.array([0,0,1], dtype=np.float32)))
+                img2bb_trans = np.dot(mat2, mat1)[:2,:3]
+                bb2img_trans = np.dot(np.linalg.inv(mat1), np.linalg.inv(mat2))[:2,:3]    
+                
             if self.test_set == 'val':
-                # transform from original image to crop_and_resize image
-                if self.resolution == (2160, 3840):
-                    mat1 = np.concatenate((data['img2bb_trans_from_orig'], np.array([0,0,1], dtype=np.float32)))
-                    mat2 = np.concatenate((img2bb_trans, np.array([0,0,1], dtype=np.float32)))
-                    img2bb_trans = np.dot(mat2, mat1)[:2,:3]
-                    bb2img_trans = np.dot(np.linalg.inv(mat1), np.linalg.inv(mat2))[:2,:3]
-       
                 # smplx parameters
                 with open(data['smplx_param_path']) as f:
                     smplx_param = json.load(f)
@@ -310,7 +310,7 @@ class AGORA(torch.utils.data.Dataset):
                         'rhand_pose': rhand_pose, 'rhand_valid': True, 
                         'jaw_pose': jaw_pose, 'expr': expr, 'face_valid': True,
                         'trans': trans}
-                smplx_joint_img, smplx_joint_cam, smplx_joint_trunc, smplx_pose, smplx_shape, smplx_expr, smplx_pose_valid, smplx_joint_valid, smplx_expr_valid, smplx_mesh_cam_orig = process_human_model_output(smplx_param, cam_param, do_flip, img_shape, img2bb_trans, rot, 'smplx')
+                _, _, _, _, _, _, _, _, _, smplx_mesh_cam_orig = process_human_model_output(smplx_param, cam_param, do_flip, img_shape, img2bb_trans, rot, 'smplx')
 
                 inputs = {'img': img}
                 targets = {'smplx_mesh_cam': smplx_mesh_cam_orig}
