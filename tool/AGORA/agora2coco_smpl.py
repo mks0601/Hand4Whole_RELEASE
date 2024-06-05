@@ -256,8 +256,8 @@ for split in ('train', 'validation'):
         for i in range(img_num):
             img_dict = {}
             img_dict['id'] = image_id
-            img_dict['file_name_3840x2160'] = osp.join('3840x2160', img_folder_name, data['imgPath'][i])
-            img_dict['file_name_1280x720'] = osp.join('1280x720', img_folder_name, data['imgPath'][i][:-4] + '_1280x720.png')
+            img_dict['file_name_3840x2160'] = osp.join('images_3840x2160', img_folder_name, data['imgPath'][i])
+            img_dict['file_name_1280x720'] = osp.join('images_1280x720', img_folder_name, data['imgPath'][i][:-4] + '_1280x720.png')
             images.append(img_dict)
 
             person_num = len(data['gt_path_smpl'][i])
