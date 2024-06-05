@@ -252,13 +252,6 @@ class AGORA(torch.utils.data.Dataset):
         img, img2bb_trans, bb2img_trans, rot, do_flip = augmentation(img, bbox, self.data_split)
         img = self.transform(img.astype(np.float32))/255.
 
-        # transform from original image to crop_and_resize image
-        if self.resolution == (2160, 3840):
-            mat1 = np.concatenate((data['img2bb_trans_from_orig'], np.array([0,0,1], dtype=np.float32)))
-            mat2 = np.concatenate((img2bb_trans, np.array([0,0,1], dtype=np.float32)))
-            img2bb_trans = np.dot(mat2, mat1)[:2,:3]
-            bb2img_trans = np.dot(np.linalg.inv(mat1), np.linalg.inv(mat2))[:2,:3]
-       
         if self.data_split == 'train':
             # hand and face bbox transform
             lhand_bbox, rhand_bbox, face_bbox = data['lhand_bbox'], data['rhand_bbox'], data['face_bbox']
@@ -308,8 +301,12 @@ class AGORA(torch.utils.data.Dataset):
             trans = np.array(smplx_param['transl'], dtype=np.float32).reshape(-1) 
             with open(data['cam_param_path']) as f:
                 cam_param = {k: np.array(v, dtype=np.float32) for k,v in json.load(f).items()}            
-            # scale camera parameters
-            if self.resolution != (2160, 3840):
+            if self.resolution == (2160, 3840): # apply crop and resize
+                cam_param['focal'][0] = cam_param['focal'][0] * data['img2bb_trans_from_orig'][0][0]
+                cam_param['focal'][1] = cam_param['focal'][1] * data['img2bb_trans_from_orig'][1][1]
+                cam_param['princpt'][0] = cam_param['princpt'][0] * data['img2bb_trans_from_orig'][0][0] + data['img2bb_trans_from_orig'][0][2]
+                cam_param['princpt'][1] = cam_param['princpt'][1] * data['img2bb_trans_from_orig'][1][1] + data['img2bb_trans_from_orig'][1][2]
+            else: # scale camera parameters
                 cam_param['focal'][0] = cam_param['focal'][0] / 3840 * self.resolution[1]
                 cam_param['focal'][1] = cam_param['focal'][1] / 2160 * self.resolution[0]
                 cam_param['princpt'][0] = cam_param['princpt'][0] / 3840 * self.resolution[1]
@@ -329,6 +326,13 @@ class AGORA(torch.utils.data.Dataset):
             return inputs, targets, meta_info
         else:
             if self.test_set == 'val':
+                # transform from original image to crop_and_resize image
+                if self.resolution == (2160, 3840):
+                    mat1 = np.concatenate((data['img2bb_trans_from_orig'], np.array([0,0,1], dtype=np.float32)))
+                    mat2 = np.concatenate((img2bb_trans, np.array([0,0,1], dtype=np.float32)))
+                    img2bb_trans = np.dot(mat2, mat1)[:2,:3]
+                    bb2img_trans = np.dot(np.linalg.inv(mat1), np.linalg.inv(mat2))[:2,:3]
+       
                 # smplx parameters
                 with open(data['smplx_param_path']) as f:
                     smplx_param = json.load(f)
