@@ -307,7 +307,13 @@ class AGORA(torch.utils.data.Dataset):
             expr = np.array(smplx_param['expression'], dtype=np.float32).reshape(-1)
             trans = np.array(smplx_param['transl'], dtype=np.float32).reshape(-1) 
             with open(data['cam_param_path']) as f:
-                cam_param = json.load(f)
+                cam_param = {k: np.array(v, dtype=np.float32) for k,v in json.load(f).items()}            
+            # scale camera parameters
+            if self.resolution != (2160, 3840):
+                cam_param['focal'][0] = cam_param['focal'][0] / 3840 * self.resolution[1]
+                cam_param['focal'][1] = cam_param['focal'][1] / 2160 * self.resolution[0]
+                cam_param['princpt'][0] = cam_param['princpt'][0] / 3840 * self.resolution[1]
+                cam_param['princpt'][1] = cam_param['princpt'][1] / 2160 * self.resolution[0]
             smplx_param = {'root_pose': root_pose, 'body_pose': body_pose, 'shape': shape,
                     'lhand_pose': lhand_pose, 'lhand_valid': True, 
                     'rhand_pose': rhand_pose, 'rhand_valid': True, 
