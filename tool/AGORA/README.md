@@ -21,7 +21,7 @@
 * This code will prepare 3840x2160 image files.
 * Do the same process of 1280x720 image files
 * As the image resolution is too high, you need to crop and resize humans to prevent the dataloader from being stuck.
-* To this end, run `python affine_transom.py --dataset_path $DATASET_PATH --out_height 512 --out_width 384`. $DATASET_PATH denotes AGORA dataset path. 
+* To this end, run `python crop_and_resize_4k_images.py --dataset_path $DATASET_PATH --out_height 512 --out_width 384`. $DATASET_PATH denotes AGORA dataset path. 
 
 ## Download `AGORA_test_bbox.json`
 * Download human detection results on test set from [here](https://drive.google.com/file/d/1dGIMsX00xUIwlFTa1gtU9bTxbfTpMt9T/view?usp=share_link).
