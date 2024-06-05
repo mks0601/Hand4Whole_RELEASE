@@ -185,7 +185,7 @@ class AGORA(torch.utils.data.Dataset):
                         bbox = process_bbox(bbox, img_shape[1], img_shape[0])
                         if bbox is None:
                             continue
-                        datalist.append({'img_path': img_path, 'img_shape': img_shape, 'bbox': bbox, 'person_idx': person_id})
+                        datalist.append({'img_path': img_path, 'img_shape': img_shape, 'bbox': bbox, 'person_id': person_id})
 
                 elif self.resolution == (2160, 3840): # use cropped and resized images. loading 4K images in pytorch dataloader takes too much time...
                     person_num = len(bboxs[filename])
@@ -200,7 +200,7 @@ class AGORA(torch.utils.data.Dataset):
                             resized_height, resized_width = crop_resize_info['resized_height'], crop_resize_info['resized_width']
                         img_shape = (resized_height, resized_width)
                         bbox = np.array([0, 0, resized_width, resized_height], dtype=np.float32)
-                        datalist.append({'img_path': img_path, 'img_shape': img_shape, 'img2bb_trans_from_orig': img2bb_trans_from_orig, 'bbox': bbox, 'person_idx': person_id})
+                        datalist.append({'img_path': img_path, 'img_shape': img_shape, 'img2bb_trans_from_orig': img2bb_trans_from_orig, 'bbox': bbox, 'person_id': person_id})
 
         return datalist
 
@@ -433,16 +433,16 @@ class AGORA(torch.utils.data.Dataset):
                     save_name = save_name.split('_person_id')[0]
                 else:
                     save_name = save_name.split('_1280x720')[0]
-            if 'person_idx' in annot:
-                person_idx = annot['person_idx']
+            if 'person_id' in annot:
+                person_id = annot['person_id']
             else:
                 exist_result_path = glob(osp.join(cfg.result_dir, 'AGORA', save_name + '*'))
                 if len(exist_result_path) == 0:
-                    person_idx = 0
+                    person_id = 0
                 else:
-                    last_person_idx = max([int(name.split('personId_')[1].split('.pkl')[0]) for name in exist_result_path])
-                    person_idx = last_person_idx + 1
-            save_name += '_personId_' + str(person_idx) + '.pkl'
+                    last_person_id = max([int(name.split('personId_')[1].split('.pkl')[0]) for name in exist_result_path])
+                    person_id = last_person_id + 1
+            save_name += '_personId_' + str(person_id) + '.pkl'
 
             joint_proj = out['smplx_joint_proj']
             joint_proj[:,0] = joint_proj[:,0] / cfg.output_hm_shape[2] * cfg.input_img_shape[1]
