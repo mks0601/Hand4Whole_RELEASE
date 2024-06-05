@@ -6,8 +6,9 @@ from glob import glob
 from tqdm import tqdm
 import cv2
 import pickle
-import pathlib
+import os
 from pycocotools.coco import COCO
+from torch.utils.data import DataLoader
 import argparse
 
 def parse_args():
@@ -102,32 +103,41 @@ def gen_trans_from_patch_cv(c_x, c_y, src_width, src_height, dst_width, dst_heig
     return trans
 
 class AGORA(torch.utils.data.Dataset):
-    def __init__(self, out_height, out_width):
-        self.root_path = '/mnt/disk3/AGORA'
+    def __init__(self, dataset_path, out_height, out_width):
+        self.root_path = dataset_path
         self.img_shape = (2160, 3840) # height, width
         self.out_shape = (out_height, out_width)
         
         self.datalist = []
         for split in ('train', 'validation', 'test'):
-            
+           
             if split in ('train', 'validation'):
-                db = COCO(osp.join(self.root_path, 'AGORA_' + split + '.json'))
+                db_smplx_path = osp.join(self.root_path, 'AGORA_' + split + '_SMPLX.json')
+                db_smpl_path = osp.join(self.root_path, 'AGORA_' + split + '_SMPL.json')
+                if osp.isfile(db_smplx_path):
+                    db = COCO(db_smplx_path)
+                elif osp.isfile(db_smpl_path):
+                    db = COCO(db_smpl_path)
+                else:
+                    assert 0
+
                 for aid in db.anns.keys():
                     ann = db.anns[aid]
                     img = db.loadImgs(ann['image_id'])[0]
+                    person_id = ann['person_id']
                     bbox = np.array(ann['bbox']).reshape(4)
                     bbox = process_bbox(bbox, self.img_shape[1], self.img_shape[0], self.out_shape[1]/self.out_shape[0])
                     if bbox is None:
                         continue
 
-                    save_path = osp.join(self.root_path, '3840x2160', img['file_name_3840x2160'].split('/')[-2] + '_crop')
-                    pathlib.Path(save_path).mkdir(parents=True, exist_ok=True)
+                    save_path = osp.join(self.root_path, 'images_3840x2160', img['file_name_3840x2160'].split('/')[-2] + '_crop')
+                    os.makedirs(save_path, exist_ok=True)
 
                     self.datalist.append({
                                     'orig_img_path': osp.join(self.root_path, img['file_name_3840x2160']),
                                     'bbox': bbox,
-                                    'save_img_path': osp.join(save_path, img['file_name_3840x2160'].split('/')[-1][:-4] + '_ann_id_' + str(aid) + '.png'),
-                                    'save_json_path': osp.join(save_path, img['file_name_3840x2160'].split('/')[-1][:-4] + '_ann_id_' + str(aid) + '.json')
+                                    'save_img_path': osp.join(save_path, img['file_name_3840x2160'].split('/')[-1][:-4] + '_person_id_' + str(person_id) + '.png'),
+                                    'save_json_path': osp.join(save_path, img['file_name_3840x2160'].split('/')[-1][:-4] + '_person_id_' + str(person_id) + '.json')
                                     })
 
             else:
@@ -135,20 +145,20 @@ class AGORA(torch.utils.data.Dataset):
                     db = json.load(f)
                 for filename in db.keys():
                     person_num = len(db[filename])
-                    for pid in range(person_num):
-                        bbox = np.array(db[filename][pid]['bbox']).reshape(4)
+                    for person_id in range(person_num):
+                        bbox = np.array(db[filename][person_id]['bbox']).reshape(4)
                         bbox = process_bbox(bbox, self.img_shape[1], self.img_shape[0], self.out_shape[1]/self.out_shape[0])
                         if bbox is None:
                             continue
 
-                        save_path = osp.join(self.root_path, '3840x2160', 'test_crop')
-                        pathlib.Path(save_path).mkdir(parents=True, exist_ok=True)
+                        save_path = osp.join(self.root_path, 'images_3840x2160', 'test_crop')
+                        os.makedirs(save_path, exist_ok=True)
 
                         self.datalist.append({
                                         'orig_img_path': osp.join(self.root_path, '3840x2160', 'test', filename),
                                         'bbox': bbox,
-                                        'save_img_path': osp.join(save_path, filename.split('/')[-1][:-4] + '_pid_' + str(pid) + '.png'),
-                                        'save_json_path': osp.join(save_path, filename.split('/')[-1][:-4] + '_pid_' + str(pid) + '.json')
+                                        'save_img_path': osp.join(save_path, filename.split('/')[-1][:-4] + '_person_id_' + str(person_id) + '.png'),
+                                        'save_json_path': osp.join(save_path, filename.split('/')[-1][:-4] + '_person_id_' + str(person_id) + '.json')
                                         })
 
     def __len__(self):
@@ -163,14 +173,11 @@ class AGORA(torch.utils.data.Dataset):
         
         cv2.imwrite(save_img_path, img)
         with open(save_json_path, 'w') as f:
-            json.dump({'bbox': bbox.tolist(), 'img2bb_trans': img2bb_trans.tolist(), 'resized_height': self.out_shape[0], 'resized_width': self.out_shape[1]}, f)
+            json.dump({'bbox_orig': bbox.tolist(), 'affine_mat': img2bb_trans.tolist(), 'resized_height': self.out_shape[0], 'resized_width': self.out_shape[1]}, f)
 
         return 1
 
 
-from torch.utils.data import DataLoader
-
-# argument parse
 args = parse_args()
 dataset = AGORA(args.dataset_path, int(args.out_height), int(args.out_width))
 batch_size = 128
@@ -178,6 +185,3 @@ num_workers = 32
 batch_generator = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 for _ in tqdm(batch_generator):
     pass
-
-    
-
