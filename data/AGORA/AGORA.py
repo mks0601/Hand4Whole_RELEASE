@@ -129,7 +129,7 @@ class AGORA(torch.utils.data.Dataset):
                         continue
                     with open(json_path) as f:
                         crop_resize_info = json.load(f)
-                        img2bb_trans_from_orig = np.array(crop_resize_info['img2bb_trans'], dtype=np.float32)
+                        img2bb_trans_from_orig = np.array(crop_resize_info['affine_mat'], dtype=np.float32)
                         resized_height, resized_width = crop_resize_info['resized_height'], crop_resize_info['resized_width']
                     img_shape = (resized_height, resized_width)
                     bbox = np.array([0, 0, resized_width, resized_height], dtype=np.float32)
