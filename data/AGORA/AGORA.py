@@ -75,6 +75,7 @@ class AGORA(torch.utils.data.Dataset):
             for aid in db.anns.keys():
                 ann = db.anns[aid]
                 image_id = ann['image_id']
+                person_id = ann['person_id']
                 img = db.loadImgs(image_id)[0]
                 if not ann['is_valid']:
                     continue
@@ -122,8 +123,8 @@ class AGORA(torch.utils.data.Dataset):
                     datalist.append(data_dict)
 
                 elif self.resolution == (2160, 3840): # use cropped and resized images. loading 4K images in pytorch dataloader takes too much time...
-                    img_path = osp.join(self.data_path, '3840x2160', img['file_name_3840x2160'].split('/')[-2] + '_crop', img['file_name_3840x2160'].split('/')[-1][:-4] + '_ann_id_' + str(aid) + '.png')
-                    json_path = osp.join(self.data_path, '3840x2160', img['file_name_3840x2160'].split('/')[-2] + '_crop', img['file_name_3840x2160'].split('/')[-1][:-4] + '_ann_id_' + str(aid) + '.json')
+                    img_path = osp.join(self.data_path, '3840x2160', img['file_name_3840x2160'].split('/')[-2] + '_crop', img['file_name_3840x2160'].split('/')[-1][:-4] + '_person_id_' + str(person_id) + '.png')
+                    json_path = osp.join(self.data_path, '3840x2160', img['file_name_3840x2160'].split('/')[-2] + '_crop', img['file_name_3840x2160'].split('/')[-1][:-4] + '_person_id_' + str(person_id) + '.json')
                     if not osp.isfile(json_path):
                         continue
                     with open(json_path) as f:
@@ -175,22 +176,22 @@ class AGORA(torch.utils.data.Dataset):
                     img_path = osp.join(self.data_path, 'test', filename)
                     img_shape = self.resolution
                     person_num = len(bboxs[filename])
-                    for pid in range(person_num):
+                    for person_id in range(person_num):
                         # change bbox from (2160,3840) to target resoution
-                        bbox = np.array(bboxs[filename][pid]['bbox']).reshape(2,2)
+                        bbox = np.array(bboxs[filename][person_id]['bbox']).reshape(2,2)
                         bbox[:,0] = bbox[:,0] / 3840 * 1280
                         bbox[:,1] = bbox[:,1] / 2160 * 720
                         bbox = bbox.reshape(4)
                         bbox = process_bbox(bbox, img_shape[1], img_shape[0])
                         if bbox is None:
                             continue
-                        datalist.append({'img_path': img_path, 'img_shape': img_shape, 'bbox': bbox, 'person_idx': pid})
+                        datalist.append({'img_path': img_path, 'img_shape': img_shape, 'bbox': bbox, 'person_idx': person_id})
 
                 elif self.resolution == (2160, 3840): # use cropped and resized images. loading 4K images in pytorch dataloader takes too much time...
                     person_num = len(bboxs[filename])
-                    for pid in range(person_num):
-                        img_path = osp.join(self.data_path, '3840x2160', 'test_crop', filename[:-4] + '_pid_' + str(pid) + '.png')
-                        json_path = osp.join(self.data_path, '3840x2160', 'test_crop', filename[:-4] + '_pid_' + str(pid) + '.json')
+                    for person_id in range(person_num):
+                        img_path = osp.join(self.data_path, '3840x2160', 'test_crop', filename[:-4] + '_person_id_' + str(person_id) + '.png')
+                        json_path = osp.join(self.data_path, '3840x2160', 'test_crop', filename[:-4] + '_person_id_' + str(person_id) + '.json')
                         if not osp.isfile(json_path):
                             continue
                         with open(json_path) as f:
@@ -199,7 +200,7 @@ class AGORA(torch.utils.data.Dataset):
                             resized_height, resized_width = crop_resize_info['resized_height'], crop_resize_info['resized_width']
                         img_shape = (resized_height, resized_width)
                         bbox = np.array([0, 0, resized_width, resized_height], dtype=np.float32)
-                        datalist.append({'img_path': img_path, 'img_shape': img_shape, 'img2bb_trans_from_orig': img2bb_trans_from_orig, 'bbox': bbox, 'person_idx': pid})
+                        datalist.append({'img_path': img_path, 'img_shape': img_shape, 'img2bb_trans_from_orig': img2bb_trans_from_orig, 'bbox': bbox, 'person_idx': person_id})
 
         return datalist
 
@@ -426,10 +427,10 @@ class AGORA(torch.utils.data.Dataset):
             save_name = annot['img_path'].split('/')[-1][:-4]
             if self.data_split == 'test' and self.test_set == 'test':
                 if self.resolution == (2160,3840):
-                    save_name = save_name.split('_pid')[0]
+                    save_name = save_name.split('_person_id')[0]
             elif self.data_split == 'test' and self.test_set == 'val':
                 if self.resolution == (2160,3840):
-                    save_name = save_name.split('_ann_id')[0]
+                    save_name = save_name.split('_person_id')[0]
                 else:
                     save_name = save_name.split('_1280x720')[0]
             if 'person_idx' in annot:
