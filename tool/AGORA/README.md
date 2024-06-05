@@ -13,7 +13,7 @@
 ## Preparing 1280x720 image files
 * This code will prepare 1280x720 image files.
 * Download and unzip 1280x720 image files.
-* Then, make `1280x720` folder in AGORA dataset path.
+* Then, make `images_1280x720` folder in AGORA dataset path.
 * For the $i$th zip file of training set, make `train_$i$` folder and move all image files to that folder. For example, make `train_0` folder at AGORA dataset path and move all image files from `train_images_1280x720_0.zip` to that folder.
 * For the images of validation and test sets, make `validation` and `test` folders and move all images files to corresponding folders.
 
@@ -71,7 +71,7 @@ ${DATASET_PATH}
 |   |-- train_8
 |   |-- train_9
 |   |-- validation
-|-- 1280x720
+|-- images_1280x720
 |   |-- train_0
 |   |-- train_1
 |   |-- train_2
@@ -84,7 +84,7 @@ ${DATASET_PATH}
 |   |-- train_9
 |   |-- validation
 |   |-- test
-|-- 3840x2160
+|-- images_3840x2160
 |   |-- train_0
 |   |-- train_0_crop
 |   |-- train_1
