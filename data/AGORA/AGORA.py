@@ -22,14 +22,6 @@ class AGORA(torch.utils.data.Dataset):
         self.data_path = osp.join('..', 'data', 'AGORA', 'data')
         self.resolution = (2160, 3840) # height, width. one of (720, 1280) and (2160, 3840)
         self.test_set = 'test' # val, test
-        
-        # AGORA joint set
-        self.joint_set = {
-                            'joint_num': 45,
-                            'joints_name': ('Pelvis', 'L_Hip', 'R_Hip', 'Spine_1', 'L_Knee', 'R_Knee', 'Spine_2', 'L_Ankle', 'R_Ankle', 'Spine_3', 'L_Foot', 'R_Foot', 'Neck', 'L_Collar', 'R_Collar', 'Head', 'L_Shoulder', 'R_Shoulder', 'L_Elbow', 'R_Elbow', 'L_Wrist', 'R_Wrist', 'L_Hand', 'R_Hand', 'Nose', 'R_Eye', 'L_Eye', 'R_Ear', 'L_Ear', 'L_Big_toe', 'L_Small_toe', 'L_Heel', 'R_Big_toe', 'R_Small_toe', 'R_Heel', 'L_Thumb_4', 'L_Index_4', 'L_Middle_4', 'L_Ring_4', 'L_Pinky_4', 'R_Thumb_4', 'R_Index_4', 'R_Middle_4', 'R_Ring_4', 'R_Pinky_4'),
-                            'flip_pairs': ( (1,2), (4,5), (7,8), (10,11), (13,14), (16,17), (18,19), (20,21), (22,23), (25,26), (27,28), (29,32), (30,33), (31,34), (35,40), (36,41), (37,42), (38,43), (39,44) )           
-                            }
-        self.joint_set['root_joint_idx'] = self.joint_set['joints_name'].index('Pelvis')
         self.datalist = self.load_data()
 
     def load_data(self):
@@ -68,8 +60,8 @@ class AGORA(torch.utils.data.Dataset):
                     datalist.append(data_dict)
 
                 elif self.resolution == (2160, 3840): # use cropped and resized images. loading 4K images in pytorch dataloader takes too much time...
-                    img_path = osp.join(self.data_path, '3840x2160', img['file_name_3840x2160'].split('/')[-2] + '_crop', img['file_name_3840x2160'].split('/')[-1][:-4] + '_person_id_' + str(person_id) + '.png')
-                    json_path = osp.join(self.data_path, '3840x2160', img['file_name_3840x2160'].split('/')[-2] + '_crop', img['file_name_3840x2160'].split('/')[-1][:-4] + '_person_id_' + str(person_id) + '.json')
+                    img_path = osp.join(self.data_path, 'images_3840x2160', img['file_name_3840x2160'].split('/')[-2] + '_crop', img['file_name_3840x2160'].split('/')[-1][:-4] + '_person_id_' + str(person_id) + '.png')
+                    json_path = osp.join(self.data_path, 'images_3840x2160', img['file_name_3840x2160'].split('/')[-2] + '_crop', img['file_name_3840x2160'].split('/')[-1][:-4] + '_person_id_' + str(person_id) + '.json')
                     if not osp.isfile(json_path):
                         continue
                     with open(json_path) as f:
@@ -107,8 +99,8 @@ class AGORA(torch.utils.data.Dataset):
                 elif self.resolution == (2160, 3840): # use cropped and resized images. loading 4K images in pytorch dataloader takes too much time...
                     person_num = len(bboxs[filename])
                     for person_id in range(person_num):
-                        img_path = osp.join(self.data_path, '3840x2160', 'test_crop', filename[:-4] + '_person_id_' + str(person_id) + '.png')
-                        json_path = osp.join(self.data_path, '3840x2160', 'test_crop', filename[:-4] + '_person_id_' + str(person_id) + '.json')
+                        img_path = osp.join(self.data_path, 'images_3840x2160', 'test_crop', filename[:-4] + '_person_id_' + str(person_id) + '.png')
+                        json_path = osp.join(self.data_path, 'images_3840x2160', 'test_crop', filename[:-4] + '_person_id_' + str(person_id) + '.json')
                         if not osp.isfile(json_path):
                             print(json_path)
                             continue
