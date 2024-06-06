@@ -26,7 +26,7 @@ def parse_args():
 
     return args
 
-def process_bbox(bbox, img_width, img_height, aspect_ratio):
+def set_aspect_ratio(bbox, aspect_ratio):
    # aspect ratio preserving bbox
     w = bbox[2]
     h = bbox[3]
@@ -42,7 +42,7 @@ def process_bbox(bbox, img_width, img_height, aspect_ratio):
     bbox[1] = c_y - bbox[3]/2.
     return bbox
 
-def generate_patch_image(cvimg, bbox, out_shape):
+def get_patch_img(cvimg, bbox, out_shape):
     img = cvimg.copy()
     img_height, img_width, img_channels = img.shape
    
@@ -51,13 +51,13 @@ def generate_patch_image(cvimg, bbox, out_shape):
     bb_width = float(bbox[2])
     bb_height = float(bbox[3])
 
-    trans = gen_trans_from_patch_cv(bb_c_x, bb_c_y, bb_width, bb_height, out_shape[1], out_shape[0])
+    trans = get_affine_trans_mat(bb_c_x, bb_c_y, bb_width, bb_height, out_shape[1], out_shape[0])
     img_patch = cv2.warpAffine(img, trans, (int(out_shape[1]), int(out_shape[0])), flags=cv2.INTER_LINEAR)
     img_patch = img_patch.astype(np.float32)
-    inv_trans = gen_trans_from_patch_cv(bb_c_x, bb_c_y, bb_width, bb_height, out_shape[1], out_shape[0], inv=True)
+    inv_trans = get_affine_trans_mat(bb_c_x, bb_c_y, bb_width, bb_height, out_shape[1], out_shape[0], inv=True)
     return img_patch, trans, inv_trans
 
-def gen_trans_from_patch_cv(c_x, c_y, src_width, src_height, dst_width, dst_height, inv=False):
+def get_affine_trans_mat(c_x, c_y, src_width, src_height, dst_width, dst_height, inv=False):
     src_w = src_width
     src_h = src_height
     src_center = np.array([c_x, c_y], dtype=np.float32)
@@ -113,7 +113,8 @@ class AGORA(torch.utils.data.Dataset):
                     img = db.loadImgs(ann['image_id'])[0]
                     person_id = ann['person_id']
                     bbox = np.array(ann['bbox']).reshape(4)
-                    bbox = process_bbox(bbox, self.out_shape[1]/self.out_shape[0])
+                    bbox = set_aspect_ratio(bbox, self.out_shape[1]/self.out_shape[0])
+
                     save_path = osp.join(self.root_path, 'images_3840x2160', img['file_name_3840x2160'].split('/')[-2] + '_crop')
                     os.makedirs(save_path, exist_ok=True)
 
@@ -131,7 +132,8 @@ class AGORA(torch.utils.data.Dataset):
                     person_num = len(db[filename])
                     for person_id in range(person_num):
                         bbox = np.array(db[filename][person_id]['bbox']).reshape(4)
-                        bbox = process_bbox(bbox, self.out_shape[1]/self.out_shape[0])
+                        bbox = set_aspect_ratio(bbox, self.out_shape[1]/self.out_shape[0])
+
                         save_path = osp.join(self.root_path, 'images_3840x2160', 'test_crop')
                         os.makedirs(save_path, exist_ok=True)
 
@@ -150,7 +152,7 @@ class AGORA(torch.utils.data.Dataset):
         orig_img_path, bbox, save_img_path, save_json_path = data['orig_img_path'], data['bbox'], data['save_img_path'], data['save_json_path']
 
         img = cv2.imread(orig_img_path)
-        img, img2bb_trans, bb2img_trans = generate_patch_image(img, bbox, self.out_shape)
+        img, img2bb_trans, bb2img_trans = get_patch_img(img, bbox, self.out_shape)
         
         cv2.imwrite(save_img_path, img)
         with open(save_json_path, 'w') as f:
