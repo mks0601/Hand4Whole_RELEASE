@@ -27,17 +27,6 @@ def parse_args():
     return args
 
 def process_bbox(bbox, img_width, img_height, aspect_ratio):
-    # sanitize bboxes
-    x, y, w, h = bbox
-    x1 = np.max((0, x))
-    y1 = np.max((0, y))
-    x2 = np.min((img_width - 1, x1 + np.max((0, w - 1))))
-    y2 = np.min((img_height - 1, y1 + np.max((0, h - 1))))
-    if w*h > 0 and x2 >= x1 and y2 >= y1:
-        bbox = np.array([x1, y1, x2-x1, y2-y1])
-    else:
-        return None
-
    # aspect ratio preserving bbox
     w = bbox[2]
     h = bbox[3]
@@ -51,7 +40,6 @@ def process_bbox(bbox, img_width, img_height, aspect_ratio):
     bbox[3] = h*1.25
     bbox[0] = c_x - bbox[2]/2.
     bbox[1] = c_y - bbox[3]/2.
-
     return bbox
 
 def generate_patch_image(cvimg, bbox, out_shape):
@@ -67,7 +55,6 @@ def generate_patch_image(cvimg, bbox, out_shape):
     img_patch = cv2.warpAffine(img, trans, (int(out_shape[1]), int(out_shape[0])), flags=cv2.INTER_LINEAR)
     img_patch = img_patch.astype(np.float32)
     inv_trans = gen_trans_from_patch_cv(bb_c_x, bb_c_y, bb_width, bb_height, out_shape[1], out_shape[0], inv=True)
-
     return img_patch, trans, inv_trans
 
 def gen_trans_from_patch_cv(c_x, c_y, src_width, src_height, dst_width, dst_height, inv=False):
@@ -126,10 +113,7 @@ class AGORA(torch.utils.data.Dataset):
                     img = db.loadImgs(ann['image_id'])[0]
                     person_id = ann['person_id']
                     bbox = np.array(ann['bbox']).reshape(4)
-                    bbox = process_bbox(bbox, self.img_shape[1], self.img_shape[0], self.out_shape[1]/self.out_shape[0])
-                    if bbox is None:
-                        continue
-
+                    bbox = process_bbox(bbox, self.out_shape[1]/self.out_shape[0])
                     save_path = osp.join(self.root_path, 'images_3840x2160', img['file_name_3840x2160'].split('/')[-2] + '_crop')
                     os.makedirs(save_path, exist_ok=True)
 
@@ -147,10 +131,7 @@ class AGORA(torch.utils.data.Dataset):
                     person_num = len(db[filename])
                     for person_id in range(person_num):
                         bbox = np.array(db[filename][person_id]['bbox']).reshape(4)
-                        bbox = process_bbox(bbox, self.img_shape[1], self.img_shape[0], self.out_shape[1]/self.out_shape[0])
-                        if bbox is None:
-                            continue
-
+                        bbox = process_bbox(bbox, self.out_shape[1]/self.out_shape[0])
                         save_path = osp.join(self.root_path, 'images_3840x2160', 'test_crop')
                         os.makedirs(save_path, exist_ok=True)
 
