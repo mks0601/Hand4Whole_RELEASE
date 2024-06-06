@@ -5,7 +5,6 @@ import os.path as osp
 from glob import glob
 from tqdm import tqdm
 import cv2
-import pickle
 import os
 from pycocotools.coco import COCO
 from torch.utils.data import DataLoader
