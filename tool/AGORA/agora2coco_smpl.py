@@ -217,18 +217,21 @@ def get_bbox(joint_img, joint_valid):
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset_path', type=str, dest='dataset_path')
+    parser.add_argument('--human_model_path', type=str, dest='human_model_path')
     args = parser.parse_args()
     assert args.dataset_path, "Please set dataset_path"
+    assert args.human_model_path, "Please set human_model_path"
     return args
 
 args = parse_args()
 dataset_path = args.dataset_path
+human_model_path = args.human_model_path
 
 image_id = 0
 ann_id = 0
 smpl_params_path = './smpl_params_cam'
 cam_params_path = './cam_params'
-smpl_layer = {k: smplx.create('/home/cv8/mks0601/workspace/human_model_files', 'smpl', gender=k) for k in ['male', 'female', 'neutral']}
+smpl_layer = {k: smplx.create(human_model_path, 'smpl', gender=k) for k in ['male', 'female', 'neutral']}
 
 os.makedirs(osp.join(dataset_path, smpl_params_path), exist_ok=True)
 os.makedirs(osp.join(dataset_path, cam_params_path), exist_ok=True)
