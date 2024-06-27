@@ -217,18 +217,21 @@ def get_bbox(joint_img, joint_valid):
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset_path', type=str, dest='dataset_path')
+    parser.add_argument('--human_model_path', type=str, dest='human_model_path')
     args = parser.parse_args()
     assert args.dataset_path, "Please set dataset_path"
+    assert args.human_model_path, "Please set human_model_path"
     return args
 
 args = parse_args()
 dataset_path = args.dataset_path
+human_model_path = args.human_model_path
 
 image_id = 0
 ann_id = 0
 smplx_params_path = './smplx_params_cam'
 cam_params_path = './cam_params'
-smplx_layer = {k: smplx.create('/home/cv8/mks0601/workspace/human_model_files', 'smplx', gender=k, use_pca=False, flat_hand_mean=False) for k in ['male', 'female', 'neutral']}
+smplx_layer = {k: smplx.create(human_model_path, 'smplx', gender=k, use_pca=False, flat_hand_mean=False) for k in ['male', 'female', 'neutral']}
 
 smplx_joints_name= \
     ('Pelvis', 'L_Hip', 'R_Hip', 'Spine_1', 'L_Knee', 'R_Knee', 'Spine_2', 'L_Ankle', 'R_Ankle', 'Spine_3', 'L_Foot', 'R_Foot', 'Neck', 'L_Collar', 'R_Collar', 'Head', 'L_Shoulder', 'R_Shoulder', 'L_Elbow', 'R_Elbow', 'L_Wrist', 'R_Wrist',  # body
