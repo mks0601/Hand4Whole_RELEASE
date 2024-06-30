@@ -121,15 +121,16 @@ ${ROOT}
 * 3D body datasets: AGORA, Human3.6M, MPII, MPI-INF-3DHP, MSCOCO, and 3DPW
 * 3D hand datasets: AGORA, FreiHAND, and MSCOCO
 * 3D face datasets: AGORA, FFHQ, and MSCOCO
-* Download AGORA parsed data [[data](https://drive.google.com/drive/folders/18CWsL28e8v50rqEbYMoU4yHHWoGJdpg_?usp=sharing)][[parsing codes](tool/AGORA)]
-* Download FFHQ parsed data and FLAME parameters [[data](https://drive.google.com/file/d/1GbS5LaKgBlNuOfSXH82Lytni3yY6XI4x/view?usp=sharing)][[FLAME parameters from NeuralAnnot](https://drive.google.com/file/d/1u2Y2B5tVuZOnWy5oiNOKMkI22QUxiOKL/view?usp=sharing)]
-* Download FreiHAND parsed data [[data](https://drive.google.com/drive/folders/13qR8EhHFgvJ_AjgHz-JZKQQzYJX7oLpE?usp=sharing)] [[bbox](https://drive.google.com/file/d/1LqKP3gFCDNC2epV-vsdwOZeR6_5sUZU2/view?usp=sharing)]
-* Download Human3.6M parsed data and SMPL parameters [[data](https://drive.google.com/drive/folders/1r0B9I3XxIIW_jsXjYinDpL6NFcxTZart?usp=sharing)][[SMPL parameters from NeuralAnnot](https://drive.google.com/drive/folders/1ySxiuTCSdUEqbgTcx7bx02uMglPOkKjc?usp=sharing)]
-* Download InterHand2.6M dataset from [here](https://mks0601.github.io/InterHand2.6M/).
-* Download MPII parsed data and SMPL parameters [[data](https://drive.google.com/drive/folders/1rrL_RxhwQgwhq5BU1iIRPwl285B_KTpU?usp=sharing)][[SMPL parameters from NeuralAnnot](https://drive.google.com/file/d/1Zat9Wf41IIt9P1TVW8dPh7dckF7N-Ed-/view?usp=sharing)]
-* Download MPI-INF-3DHP parsed data and SMPL parameters [[data](https://drive.google.com/drive/folders/1wQbHEXPv-WH1sNOLwdfMVB7OWsiJkq2M?usp=sharing)][[SMPL parameters from NeuralAnnot](https://drive.google.com/file/d/1A6yxW1cs2MVH3awQ-Yrgb7DNSRjGBI2p/view?usp=sharing)]
+* * Download AGORA parsed data [[data](https://1drv.ms/f/s!All7gdNh7XE5lV-yIKD9PYBrJZDG?e=EBDzif)][[parsing codes](tool/AGORA)]
+* Download EHF parsed data [[data](https://1drv.ms/u/s!All7gdNh7XE5lhLDDVsfv_d-qxjx?e=GsUaLa)]
+* Download Human3.6M parsed data and SMPL-X parameters [[data](https://1drv.ms/f/s!All7gdNh7XE5kGrEdXkTKN3qWOmg?e=8zrLzx)][[SMPL parameters from NeuralAnnot](https://drive.google.com/drive/folders/1ySxiuTCSdUEqbgTcx7bx02uMglPOkKjc?usp=sharing)]
+* Download MPII parsed data and SMPL-X parameters [[data](https://1drv.ms/f/s!All7gdNh7XE5lhxh0Mmwlvk8jwkP?e=a7GRlu)][[SMPL parameters from NeuralAnnot](https://drive.google.com/file/d/1Zat9Wf41IIt9P1TVW8dPh7dckF7N-Ed-/view?usp=sharing)]
+* Download MPI-INF-3DHP parsed data and SMPL-X parameters [[data](https://1drv.ms/f/s!All7gdNh7XE5kHg4RvaNVUo044UI?e=Eev7ST)][[SMPL parameters from NeuralAnnot](https://drive.google.com/file/d/1A6yxW1cs2MVH3awQ-Yrgb7DNSRjGBI2p/view?usp=sharing)]
 * Download MSCOCO SMPL/MANO/FLAME parameters [[SMPL parameters from NeuralAnnot](https://drive.google.com/file/d/1pFFCKuAyGY6uh112Uafw-hkbJtKCrhL_/view?usp=sharing)] [[MANO parameters from NeuralAnnot](https://drive.google.com/file/d/1OuWlMor5f0TZLVSsojz5Mh6Ut93WkcJc/view?usp=sharing)] [[FLAME parameters from NeuralAnnot](https://drive.google.com/file/d/1HlaGmwIEM6nqXXlkaNN_Cygi39oakddy/view?usp=sharing)]
-* Download 3DPW parsed data [[data](https://drive.google.com/drive/folders/1HByTBsdg_A_o-d89qd55glTl44ya3dOs?usp=sharing)]
+* Download InterHand2.6M dataset from [here](https://mks0601.github.io/InterHand2.6M/).
+* Download FFHQ parsed data and FLAME parameters [[data](https://1drv.ms/f/s!All7gdNh7XE5lWqHDLdylccJBKkh?e=v8zcbB)][[FLAME parameters from NeuralAnnot](https://drive.google.com/file/d/1u2Y2B5tVuZOnWy5oiNOKMkI22QUxiOKL/view?usp=sharing)]
+* Download FreiHAND parsed data [[data](https://1drv.ms/f/s!All7gdNh7XE5lW9LwUNRbHPN62_Y?e=Jh5rQM)] [[bbox](https://drive.google.com/file/d/1LqKP3gFCDNC2epV-vsdwOZeR6_5sUZU2/view?usp=sharing)]
+* Download 3DPW parsed data [[data](https://1drv.ms/f/s!All7gdNh7XE5lVy4n0H6ACMSpr5W?e=uq8yEd)]
 * All annotation files follow [MSCOCO format](http://cocodataset.org/#format-data). If you want to add your own dataset, you have to convert it to [MSCOCO format](http://cocodataset.org/#format-data).  
   
   
