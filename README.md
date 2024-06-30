@@ -109,7 +109,7 @@ ${ROOT}
 
 ```
 
-* Download AGORA parsed data [[data](https://1drv.ms/f/s!All7gdNh7XE5lV-yIKD9PYBrJZDG?e=EBDzif)][[parsing codes](tool/AGORA)]
+* Refer to AGORA [[parsing codes](tool/AGORA)]
 * Download EHF parsed data [[data](https://1drv.ms/u/s!All7gdNh7XE5lhLDDVsfv_d-qxjx?e=GsUaLa)]
 * Download Human3.6M parsed data and SMPL-X parameters [[data](https://1drv.ms/f/s!All7gdNh7XE5kGrEdXkTKN3qWOmg?e=8zrLzx)][[SMPL-X parameters from NeuralAnnot](https://drive.google.com/drive/folders/19ifIQtAB3ll8d37-kerL1eQWp31mOwJM?usp=sharing)]
 * Download MPII parsed data and SMPL-X parameters [[data](https://1drv.ms/f/s!All7gdNh7XE5lhxh0Mmwlvk8jwkP?e=a7GRlu)][[SMPL-X parameters from NeuralAnnot](https://drive.google.com/file/d/1alkKvhkqQGqriKst83uS-kUG7v6SkM7W/view?usp=sharing)]
