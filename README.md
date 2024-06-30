@@ -76,8 +76,10 @@ ${ROOT}
 |   |   |   |-- AGORA_train.json
 |   |   |   |-- AGORA_validation.json
 |   |   |   |-- AGORA_test_bbox.json
-|   |   |   |-- 1280x720
-|   |   |   |-- 3840x2160
+|   |   |   |-- images_1280x720
+|   |   |   |-- images_3840x2160
+|   |   |   |-- smplx_params_cam
+|   |   |   |-- cam_params
 |   |-- EHF
 |   |   |-- data
 |   |   |   |-- EHF.json
