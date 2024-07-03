@@ -18,7 +18,7 @@ This repo is official **[PyTorch](https://pytorch.org)** implementation of **[**
   
 ## Quick demo  
 * Slightly change `torchgeometry` kernel code following [here](https://github.com/mks0601/I2L-MeshNet_RELEASE/issues/6#issuecomment-675152527).
-* Download the pre-trained Hand4Whole from [here](https://drive.google.com/file/d/1r0LfI_ATI8NmhOj4y8eqLlEDdNQj5SCV/view?usp=sharing).
+* Download the pre-trained Hand4Whole from [here](https://1drv.ms/u/s!All7gdNh7XE5oHu0sB05veDhYpxj?e=yX1M0L).
 * Prepare `input.png` and pre-trained snapshot at `demo` folder.
 * Prepare `human_model_files` folder following below `Directory` part and place it at `common/utils/human_model_files`.
 * Go to any of `demo` folders and edit `bbox`.
@@ -113,10 +113,10 @@ ${ROOT}
 
 * Refer to AGORA [[parsing codes](tool/AGORA)]
 * Download EHF parsed data [[data](https://1drv.ms/u/s!All7gdNh7XE5lhLDDVsfv_d-qxjx?e=GsUaLa)]
-* Download Human3.6M parsed data and SMPL-X parameters [[data](https://1drv.ms/f/s!All7gdNh7XE5kGrEdXkTKN3qWOmg?e=8zrLzx)][[SMPL-X parameters from NeuralAnnot](https://drive.google.com/drive/folders/19ifIQtAB3ll8d37-kerL1eQWp31mOwJM?usp=sharing)]
-* Download MPII parsed data and SMPL-X parameters [[data](https://1drv.ms/f/s!All7gdNh7XE5lhxh0Mmwlvk8jwkP?e=a7GRlu)][[SMPL-X parameters from NeuralAnnot](https://drive.google.com/file/d/1alkKvhkqQGqriKst83uS-kUG7v6SkM7W/view?usp=sharing)]
-* Download MPI-INF-3DHP parsed data and SMPL-X parameters [[data](https://1drv.ms/f/s!All7gdNh7XE5kHg4RvaNVUo044UI?e=Eev7ST)][[SMPL-X parameters from NeuralAnnot](https://drive.google.com/file/d/1ADOJlaqaBDjZ3IEgrgLTQwNf6iHd-rGH/view?usp=sharing)]
-* Download MSCOCO data and SMPL-X parameters [[data](https://github.com/jin-s13/COCO-WholeBody)][[SMPL-X parameters from NeuralAnnot](https://drive.google.com/file/d/1RVJiI2Y1TjiAPcRnDZk5CX5L7Vehfinm/view?usp=sharing)]
+* Download Human3.6M parsed data and SMPL-X parameters [[data](https://1drv.ms/f/s!All7gdNh7XE5kGrEdXkTKN3qWOmg?e=8zrLzx)][[SMPL-X parameters from NeuralAnnot](https://1drv.ms/f/s!All7gdNh7XE5oQ-E-cnOwnQC7ULH?e=lJr5Cu)]
+* Download MPII parsed data and SMPL-X parameters [[data](https://1drv.ms/f/s!All7gdNh7XE5lhxh0Mmwlvk8jwkP?e=a7GRlu)][[SMPL-X parameters from NeuralAnnot](https://1drv.ms/u/s!All7gdNh7XE5oTG8Vm1UgTW1lqWt?e=qlbL8U)]
+* Download MPI-INF-3DHP parsed data and SMPL-X parameters [[data](https://1drv.ms/f/s!All7gdNh7XE5kHg4RvaNVUo044UI?e=Eev7ST)][[SMPL-X parameters from NeuralAnnot](https://1drv.ms/u/s!All7gdNh7XE5oQ2J3nc4WBx3dMsP?e=7mhia6)]
+* Download MSCOCO data and SMPL-X parameters [[data](https://github.com/jin-s13/COCO-WholeBody)][[SMPL-X parameters from NeuralAnnot](https://1drv.ms/u/s!All7gdNh7XE5oXFjl3fMSvRDcC6n?e=kz88Tt)]
 * Download 3DPW parsed data [[data](https://1drv.ms/f/s!All7gdNh7XE5lVy4n0H6ACMSpr5W?e=mmERWV)]
 * All annotation files follow [MSCOCO format](http://cocodataset.org/#format-data). If you want to add your own dataset, you have to convert it to [MSCOCO format](http://cocodataset.org/#format-data).  
   
@@ -149,10 +149,10 @@ In the `main` folder, run
 ```bash  
 python train.py --gpu 0-3 --lr 1e-4 --continue
 ```  
-to train Hand4Whole on the GPU 0,1,2,3. `--gpu 0,1,2,3` can be used instead of `--gpu 0-3`. To train Hand4Whole from the pre-trained 2D human pose estimation network, download [this](https://drive.google.com/file/d/1E_gEoY7pS5BTNcpxeM1IftkkboPKebs-/view?usp=sharing) and place it at `tool`. Then, run `python convert_simple_to_pose2pose.py`, which produces `snapshot_0.pth.tar`. Finally, place `snapshot_0.pth.tar` to `output/model_dump`.
+to train Hand4Whole on the GPU 0,1,2,3. `--gpu 0,1,2,3` can be used instead of `--gpu 0-3`. To train Hand4Whole from the pre-trained 2D human pose estimation network, download [this](https://1drv.ms/u/s!All7gdNh7XE5oHllO47Xx9pxnLMi?e=1fMnIi) and place it at `tool`. Then, run `python convert_simple_to_pose2pose.py`, which produces `snapshot_0.pth.tar`. Finally, place `snapshot_0.pth.tar` to `output/model_dump`.
 
 #### 2nd: pre-train hand-only Pose2Pose
-Download pre-trained hand-only Pose2Pose from [here](https://drive.google.com/file/d/15wYR8psO2U3ZhFYQEH1-DWc81XkWvK2Y/view?usp=sharing).
+Download pre-trained hand-only Pose2Pose from [here](https://1drv.ms/u/s!All7gdNh7XE5oQWe6kjugkCvwP7U?e=skc7DU).
 Place the hand-only Pose2Pose to `tool/snapshot_12_hand.pth.tar`.
 Also, place the pre-trained Hand4Whole of the first stage to `tool/snapshot_6_all.pth.tar`.
 Then, go to `tool` folder and run `python merge_hand_to_all.py`.
@@ -185,8 +185,8 @@ python test.py --gpu 0-3 --test_epoch 6
 to test Hand4Whole on the GPU 0,1,2,3 with60th epoch trained model. `--gpu 0,1,2,3` can be used instead of `--gpu 0-3`.  
   
 ## Models
-* Download Hand4Whole trained on H36M+MPII+MSCOCO from [here](https://drive.google.com/file/d/1r0LfI_ATI8NmhOj4y8eqLlEDdNQj5SCV/view?usp=sharing).
-* Download Hand4Whole fine-tuned on AGORA (without gender classification) from [here](https://drive.google.com/file/d/10IEblHAeNRXQ0WFXMCRwlVShoEoWcvIl/view?usp=sharing). 
+* Download Hand4Whole trained on H36M+MPII+MSCOCO from [here](https://1drv.ms/u/s!All7gdNh7XE5oHu0sB05veDhYpxj?e=yX1M0L).
+* Download Hand4Whole fine-tuned on AGORA (without gender classification) from [here](https://1drv.ms/u/s!All7gdNh7XE5oH3KZKqhmz04Z4Dq?e=4sPnf0). 
 * To fine-tine Hand4Whole on AGORA, move `snapshot_6.pth.tar`, generated after the 3rd training stage, to `tool` and run `python reset_epoch.py`. Then, move the generated `snapshot_0.pth.tar` to `output/model_dump` and run `python train.py --gpu 0-3 --lr 1e-4` after changing `trainset_3d=['AGORA']`, `trainset_2d[]`, `testset='AGORA`, `lr_dec_epoch=[40,60]`, and `end_epoch = 70` at `config.py`.
 
 ## Results
