@@ -18,7 +18,7 @@ This repo is official **[PyTorch](https://pytorch.org)** implementation of **[**
   
 ## Quick demo  
 * Slightly change `torchgeometry` kernel code following [here](https://github.com/mks0601/I2L-MeshNet_RELEASE/issues/6#issuecomment-675152527).
-* Download the pre-trained Pose2Pose from any of [here (body)](https://1drv.ms/u/s!All7gdNh7XE5oQOEp8H5BJBgTjDq?e=K7desg), [here (hand)](https://1drv.ms/u/s!All7gdNh7XE5oQWe6kjugkCvwP7U?e=IExcFi), and [here (face)](https://1drv.ms/u/s!All7gdNh7XE5oQe2nqXamvXSi_HO?e=qN9kw9).
+* Download the pre-trained Pose2Pose from any of [here (body)](https://drive.google.com/file/d/1uUbit0jvSKc9o2DW6GZ9VmFfskNxPfyE/view?usp=sharing), [here (hand)](https://drive.google.com/file/d/15wYR8psO2U3ZhFYQEH1-DWc81XkWvK2Y/view?usp=sharing), and [here (face)](https://drive.google.com/file/d/1xUBye3YQHPZe5mDQfx1NWefsdWWKr_Ov/view?usp=sharing).
 * Prepare `input.png` and pre-trained snapshot at any of `demo/body`, `demo/hand`, and `demo/face` folders.
 * Prepare `human_model_files` folder following below `Directory` part and place it at `common/utils/human_model_files`.
 * Go to any of `demo/body`, `demo/hand`, and `demo/face` folders and edit `bbox`.
@@ -124,15 +124,14 @@ ${ROOT}
 * 3D hand datasets: AGORA, FreiHAND, and MSCOCO
 * 3D face datasets: AGORA, FFHQ, and MSCOCO
 * Refer to AGORA [[parsing codes](tool/AGORA)]
-* Download EHF parsed data [[data](https://1drv.ms/u/s!All7gdNh7XE5lhLDDVsfv_d-qxjx?e=GsUaLa)]
-* Download Human3.6M parsed data and SMPL-X parameters [[data](https://1drv.ms/f/s!All7gdNh7XE5kGrEdXkTKN3qWOmg?e=8zrLzx)][[SMPL parameters from NeuralAnnot](https://1drv.ms/f/s!All7gdNh7XE5oRb-ZscrxlS75Ogb?e=EaFfQz)]
-* Download MPII parsed data and SMPL-X parameters [[data](https://1drv.ms/f/s!All7gdNh7XE5lhxh0Mmwlvk8jwkP?e=a7GRlu)][[SMPL parameters from NeuralAnnot](https://1drv.ms/u/s!All7gdNh7XE5oT8hDlseabdcCimf?e=v5zeFG)]
-* Download MPI-INF-3DHP parsed data and SMPL-X parameters [[data](https://1drv.ms/f/s!All7gdNh7XE5kHg4RvaNVUo044UI?e=Eev7ST)][[SMPL parameters from NeuralAnnot](https://1drv.ms/u/s!All7gdNh7XE5oREEmLHSgZC7H2FJ?e=gHiawa)]
-* Download MSCOCO SMPL/MANO/FLAME parameters [[SMPL parameters from NeuralAnnot](https://1drv.ms/u/s!All7gdNh7XE5oXhoWkhBYo5dxJ5L?e=PH3fDh)] [[MANO parameters from NeuralAnnot](https://1drv.ms/u/s!All7gdNh7XE5oX4zIfSMlbXoA0Lk?e=Orzx74)] [[FLAME parameters from NeuralAnnot](https://1drv.ms/u/s!All7gdNh7XE5oX3BotSZg7o9ywMV?e=dNX0u5)]
+* Download FFHQ parsed data and FLAME parameters [[data](https://drive.google.com/file/d/1GbS5LaKgBlNuOfSXH82Lytni3yY6XI4x/view?usp=sharing)][[FLAME parameters from NeuralAnnot](https://drive.google.com/file/d/1u2Y2B5tVuZOnWy5oiNOKMkI22QUxiOKL/view?usp=sharing)]
+* Download FreiHAND parsed data [[data](https://drive.google.com/drive/folders/13qR8EhHFgvJ_AjgHz-JZKQQzYJX7oLpE?usp=sharing)] [[bbox](https://drive.google.com/file/d/1LqKP3gFCDNC2epV-vsdwOZeR6_5sUZU2/view?usp=sharing)]
+* Download Human3.6M parsed data and SMPL parameters [[data](https://drive.google.com/drive/folders/1r0B9I3XxIIW_jsXjYinDpL6NFcxTZart?usp=sharing)][[SMPL parameters from NeuralAnnot](https://drive.google.com/drive/folders/1ySxiuTCSdUEqbgTcx7bx02uMglPOkKjc?usp=sharing)]
 * Download InterHand2.6M dataset from [here](https://mks0601.github.io/InterHand2.6M/).
-* Download FFHQ parsed data and FLAME parameters [[data](https://1drv.ms/f/s!All7gdNh7XE5lWqHDLdylccJBKkh?e=v8zcbB)][[FLAME parameters from NeuralAnnot](https://1drv.ms/u/s!All7gdNh7XE5oS2_yEbH86xswF0i?e=ENtP5v)]
-* Download FreiHAND parsed data [[data](https://1drv.ms/f/s!All7gdNh7XE5lW9LwUNRbHPN62_Y?e=Jh5rQM)] [[bbox](https://1drv.ms/u/s!All7gdNh7XE5oCafOjvooLr-FvKh?e=ItDp2U)]
-* Download 3DPW parsed data [[data](https://1drv.ms/f/s!All7gdNh7XE5lVy4n0H6ACMSpr5W?e=uq8yEd)]
+* Download MPII parsed data and SMPL parameters [[data](https://drive.google.com/drive/folders/1rrL_RxhwQgwhq5BU1iIRPwl285B_KTpU?usp=sharing)][[SMPL parameters from NeuralAnnot](https://drive.google.com/file/d/1Zat9Wf41IIt9P1TVW8dPh7dckF7N-Ed-/view?usp=sharing)]
+* Download MPI-INF-3DHP parsed data and SMPL parameters [[data](https://drive.google.com/drive/folders/1wQbHEXPv-WH1sNOLwdfMVB7OWsiJkq2M?usp=sharing)][[SMPL parameters from NeuralAnnot](https://drive.google.com/file/d/1A6yxW1cs2MVH3awQ-Yrgb7DNSRjGBI2p/view?usp=sharing)]
+* Download MSCOCO SMPL/MANO/FLAME parameters [[SMPL parameters from NeuralAnnot](https://drive.google.com/file/d/1pFFCKuAyGY6uh112Uafw-hkbJtKCrhL_/view?usp=sharing)] [[MANO parameters from NeuralAnnot](https://drive.google.com/file/d/1OuWlMor5f0TZLVSsojz5Mh6Ut93WkcJc/view?usp=sharing)] [[FLAME parameters from NeuralAnnot](https://drive.google.com/file/d/1HlaGmwIEM6nqXXlkaNN_Cygi39oakddy/view?usp=sharing)]
+* Download 3DPW parsed data [[data](https://drive.google.com/drive/folders/1HByTBsdg_A_o-d89qd55glTl44ya3dOs?usp=sharing)]
 * All annotation files follow [MSCOCO format](http://cocodataset.org/#format-data). If you want to add your own dataset, you have to convert it to [MSCOCO format](http://cocodataset.org/#format-data).  
   
   
@@ -161,7 +160,7 @@ In the `main` folder, run
 ```bash  
 python train.py --gpu 0-3 --parts body
 ```  
-to train body-only Pose2Pose on the GPU 0,1,2,3. `--gpu 0,1,2,3` can be used instead of `--gpu 0-3`. You can chnage `body` to `hand` or `face` for the hand-only and face-only Pose2Pose, respectively. To train body-only Pose2Pose from the pre-trained 2D human pose estimation network, download [this](https://1drv.ms/u/s!All7gdNh7XE5oHllO47Xx9pxnLMi?e=IQL6yX) and place it at `tool` folder. Then run `python convert_simple_to_pose2pose.py`. Finally, move the generated `snapshot_0.pth.tar` to `output/model_dump`. Then, run
+to train body-only Pose2Pose on the GPU 0,1,2,3. `--gpu 0,1,2,3` can be used instead of `--gpu 0-3`. You can chnage `body` to `hand` or `face` for the hand-only and face-only Pose2Pose, respectively. To train body-only Pose2Pose from the pre-trained 2D human pose estimation network, download [this](https://drive.google.com/file/d/1E_gEoY7pS5BTNcpxeM1IftkkboPKebs-/view?usp=sharing) and place it at `tool` folder. Then run `python convert_simple_to_pose2pose.py`. Finally, move the generated `snapshot_0.pth.tar` to `output/model_dump`. Then, run
 ```bash  
 python train.py --gpu 0-3 --parts body --continue
 ```  
@@ -177,10 +176,10 @@ python test.py --gpu 0-3 --parts body --test_epoch 6
 to test body-only Pose2Pose on the GPU 0,1,2,3 with60th epoch trained model. `--gpu 0,1,2,3` can be used instead of `--gpu 0-3`.  You can chnage `body` to `hand` or `face` for the hand-only and face-only Pose2Pose, respectively.
   
 ## Models
-* Download body-only Pose2Pose trained on H36M+MSCOCO+MPII from [here](https://1drv.ms/u/s!All7gdNh7XE5oQOEp8H5BJBgTjDq?e=gfUaXk).
-* Download body-only Pose2Pose fine-tuned on AGORA from [here](https://1drv.ms/u/s!All7gdNh7XE5oQjnYcd4nlYcUNeg?e=HT3aLC).
-* Download hand-only Pose2Pose trained on FreiHAND+InterHand2.6M+MSCOCO from [here](https://1drv.ms/u/s!All7gdNh7XE5oQWe6kjugkCvwP7U?e=IExcFi).
-* Download face-only Pose2Pose trained on FFHQ+MSCOCO from [here](https://1drv.ms/u/s!All7gdNh7XE5oQe2nqXamvXSi_HO?e=qN9kw9).
+* Download body-only Pose2Pose trained on H36M+MSCOCO+MPII from [here](https://drive.google.com/file/d/1uUbit0jvSKc9o2DW6GZ9VmFfskNxPfyE/view?usp=sharing).
+* Download body-only Pose2Pose fine-tuned on AGORA from [here](https://drive.google.com/file/d/1G9w_jBjh7XhKQ9i7PBOuvXixW6R071jq/view?usp=sharing).
+* Download hand-only Pose2Pose trained on FreiHAND+InterHand2.6M+MSCOCO from [here](https://drive.google.com/file/d/15wYR8psO2U3ZhFYQEH1-DWc81XkWvK2Y/view?usp=sharing).
+* Download face-only Pose2Pose trained on FFHQ+MSCOCO from [here](https://drive.google.com/file/d/1xUBye3YQHPZe5mDQfx1NWefsdWWKr_Ov/view?usp=sharing).
 
 ## Results
 
