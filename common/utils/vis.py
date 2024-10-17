@@ -9,6 +9,19 @@ os.environ["PYOPENGL_PLATFORM"] = "egl"
 import pyrender
 import trimesh
 from config import cfg
+import torch
+from pytorch3d.structures import Meshes
+from pytorch3d.renderer import (
+PointLights,
+DirectionalLights,
+PerspectiveCameras,
+Materials,
+SoftPhongShader,
+RasterizationSettings,
+MeshRenderer,
+MeshRendererWithFragments,
+MeshRasterizer,
+TexturesVertex)
 
 def vis_keypoints_with_skeleton(img, kps, kps_lines, kp_thresh=0.4, alpha=1):
     # Convert from plt 0-1 RGBA colors to 0-255 BGR colors for opencv.
@@ -124,39 +137,40 @@ def save_obj(v, f, file_name='output.obj'):
         obj_file.write('f ' + str(f[i][0]+1) + '/' + str(f[i][0]+1) + ' ' + str(f[i][1]+1) + '/' + str(f[i][1]+1) + ' ' + str(f[i][2]+1) + '/' + str(f[i][2]+1) + '\n')
     obj_file.close()
 
-def render_mesh(img, mesh, face, cam_param):
-    # mesh
-    mesh = trimesh.Trimesh(mesh, face)
-    rot = trimesh.transformations.rotation_matrix(
-	np.radians(180), [1, 0, 0])
-    mesh.apply_transform(rot)
-    material = pyrender.MetallicRoughnessMaterial(metallicFactor=0.0, alphaMode='OPAQUE', baseColorFactor=(1.0, 1.0, 0.9, 1.0))
-    mesh = pyrender.Mesh.from_trimesh(mesh, material=material, smooth=False)
-    scene = pyrender.Scene(ambient_light=(0.3, 0.3, 0.3))
-    scene.add(mesh, 'mesh')
-    
-    focal, princpt = cam_param['focal'], cam_param['princpt']
-    camera = pyrender.IntrinsicsCamera(fx=focal[0], fy=focal[1], cx=princpt[0], cy=princpt[1])
-    scene.add(camera)
- 
-    # renderer
-    renderer = pyrender.OffscreenRenderer(viewport_width=img.shape[1], viewport_height=img.shape[0], point_size=1.0)
-   
-    # light
-    light = pyrender.DirectionalLight(color=[1.0, 1.0, 1.0], intensity=0.8)
-    light_pose = np.eye(4)
-    light_pose[:3, 3] = np.array([0, -1, 1])
-    scene.add(light, pose=light_pose)
-    light_pose[:3, 3] = np.array([0, 1, 1])
-    scene.add(light, pose=light_pose)
-    light_pose[:3, 3] = np.array([1, 1, 2])
-    scene.add(light, pose=light_pose)
+def render_mesh(bkg, mesh, face, cam_param):
+    mesh = torch.FloatTensor(mesh).cuda()[None,:,:]
+    face = torch.LongTensor(face.astype(np.int64)).cuda()[None,:,:]
+    cam_param = {k: torch.FloatTensor(v).cuda()[None,:] for k,v in cam_param.items()}
+    render_shape = (bkg.shape[0], bkg.shape[1]) # height, width
+
+    batch_size, vertex_num = mesh.shape[:2]
+    textures = TexturesVertex(verts_features=torch.ones((batch_size,vertex_num,3)).float().cuda())
+    mesh = torch.stack((-mesh[:,:,0], -mesh[:,:,1], mesh[:,:,2]),2) # reverse x- and y-axis following PyTorch3D axis direction
+    mesh = Meshes(mesh, face, textures)
+
+    cameras = PerspectiveCameras(focal_length=cam_param['focal'], 
+                                principal_point=cam_param['princpt'], 
+                                device='cuda',
+                                in_ndc=False,
+                                image_size=torch.LongTensor(render_shape).cuda().view(1,2))
+    raster_settings = RasterizationSettings(image_size=render_shape, blur_radius=0.0, faces_per_pixel=1, bin_size=0)
+    rasterizer = MeshRasterizer(cameras=cameras, raster_settings=raster_settings).cuda()
+    lights = PointLights(device='cuda')
+    shader = SoftPhongShader(device='cuda', cameras=cameras, lights=lights)
+    materials = Materials(
+	device='cuda',
+	specular_color=[[0.0, 0.0, 0.0]],
+	shininess=0.0
+    )
 
     # render
-    rgb, depth = renderer.render(scene, flags=pyrender.RenderFlags.RGBA)
-    rgb = rgb[:,:,:3].astype(np.float32)
-    valid_mask = (depth > 0)[:,:,None]
-
-    # save to image
-    img = rgb * valid_mask + img * (1-valid_mask)
-    return img
+    with torch.no_grad():
+        renderer = MeshRendererWithFragments(rasterizer=rasterizer, shader=shader)
+        images, fragments = renderer(mesh, materials=materials)
+    
+    # background masking
+    is_bkg = (fragments.zbuf <= 0).float().cpu().numpy()[0]
+    render = images[0,:,:,:3].cpu().numpy()
+    fg = render
+    render = fg * (1 - is_bkg) * 255 + bkg * is_bkg
+    return render
