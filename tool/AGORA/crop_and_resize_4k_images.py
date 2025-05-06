@@ -137,7 +137,7 @@ class AGORA(torch.utils.data.Dataset):
                         os.makedirs(save_path, exist_ok=True)
 
                         self.datalist.append({
-                                        'orig_img_path': osp.join(self.root_path, '3840x2160', 'test', filename),
+                                        'orig_img_path': osp.join(self.root_path, 'images_3840x2160', 'test', filename),
                                         'bbox': bbox,
                                         'save_img_path': osp.join(save_path, filename.split('/')[-1][:-4] + '_person_id_' + str(person_id) + '.png'),
                                         'save_json_path': osp.join(save_path, filename.split('/')[-1][:-4] + '_person_id_' + str(person_id) + '.json')
