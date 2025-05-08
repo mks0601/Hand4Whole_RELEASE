@@ -286,8 +286,8 @@ class AGORA(torch.utils.data.Dataset):
         else:
             # transform from original image to crop_and_resize image
             if self.resolution == (2160, 3840):
-                mat1 = np.concatenate((data['img2bb_trans_from_orig'], np.array([0,0,1], dtype=np.float32)))
-                mat2 = np.concatenate((img2bb_trans, np.array([0,0,1], dtype=np.float32)))
+                mat1 = np.concatenate((data['img2bb_trans_from_orig'], np.array([0,0,1], dtype=np.float32).reshape(1,3)))
+                mat2 = np.concatenate((img2bb_trans, np.array([0,0,1], dtype=np.float32).reshape(1,3)))
                 img2bb_trans = np.dot(mat2, mat1)[:2,:3]
                 bb2img_trans = np.dot(np.linalg.inv(mat1), np.linalg.inv(mat2))[:2,:3]    
                 
